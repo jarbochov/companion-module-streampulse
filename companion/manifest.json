@@ -5,7 +5,7 @@
 	"name": "streampulse",
 	"shortname": "streampulse",
 	"description": "Control StreamPulse timers, goals, alerts and sessions, and show live stream status",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"license": "MIT",
 	"repository": "git+https://github.com/jarbochov/companion-module-streampulse.git",
 	"bugs": "https://github.com/jarbochov/companion-module-streampulse/issues",
@@ -18,7 +18,7 @@
 	"runtime": {
 		"type": "node26",
 		"api": "nodejs-ipc",
-		"apiVersion": "0.0.0",
+		"apiVersion": "2.1.3",
 		"entrypoint": "../src/main.js"
 	},
 	"legacyIds": [],
