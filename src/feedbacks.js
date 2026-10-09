@@ -12,6 +12,8 @@ const RED = 0xcc0000
 const AMBER = 0xcc8800
 const WHITE = 0xffffff
 
+const { pageChoices, pagedOverlayChoices, splitPage } = require('./choices')
+
 module.exports = async function (self) {
 	self.setFeedbackDefinitions({
 		timer_state: {
@@ -20,7 +22,13 @@ module.exports = async function (self) {
 			description: 'True while the timer is in the chosen state',
 			defaultStyle: { bgcolor: GREEN, color: WHITE },
 			options: [
-				{ id: 'timer', type: 'dropdown', label: 'Timer', choices: timerChoices(self), default: timerChoices(self)[0].id },
+				{
+					id: 'timer',
+					type: 'dropdown',
+					label: 'Timer',
+					choices: timerChoices(self),
+					default: timerChoices(self)[0].id,
+				},
 				{
 					id: 'state',
 					type: 'dropdown',
@@ -69,7 +77,9 @@ module.exports = async function (self) {
 			name: 'Goal: complete',
 			type: 'boolean',
 			defaultStyle: { bgcolor: GREEN, color: WHITE },
-			options: [{ id: 'goal', type: 'dropdown', label: 'Goal', choices: goalChoices(self), default: goalChoices(self)[0].id }],
+			options: [
+				{ id: 'goal', type: 'dropdown', label: 'Goal', choices: goalChoices(self), default: goalChoices(self)[0].id },
+			],
 			callback: ({ options }) => {
 				const g = self.state.goals.find((x) => x.id === options.goal)
 				return !!g && !!g.complete
@@ -79,11 +89,54 @@ module.exports = async function (self) {
 			name: 'Goal: enabled',
 			type: 'boolean',
 			defaultStyle: { bgcolor: GREEN, color: WHITE },
-			options: [{ id: 'goal', type: 'dropdown', label: 'Goal', choices: goalChoices(self), default: goalChoices(self)[0].id }],
+			options: [
+				{ id: 'goal', type: 'dropdown', label: 'Goal', choices: goalChoices(self), default: goalChoices(self)[0].id },
+			],
 			callback: ({ options }) => {
 				const g = self.state.goals.find((x) => x.id === options.goal)
 				return !!g && g.enabled !== false
 			},
+		},
+		page_enabled: {
+			name: 'Overlay page: enabled',
+			type: 'boolean',
+			description: 'True while the page is enabled in the rotation',
+			defaultStyle: { bgcolor: GREEN, color: WHITE },
+			options: [
+				{ id: 'page', type: 'dropdown', label: 'Page', choices: pageChoices(self), default: pageChoices(self)[0].id },
+			],
+			callback: ({ options }) => {
+				const { overlay, page } = splitPage(options.page)
+				const p = self.state.pages[overlay]?.pages.find((x) => x.id === page)
+				return !!p && p.enabled !== false
+			},
+		},
+		page_current: {
+			name: 'Overlay page: currently showing',
+			type: 'boolean',
+			defaultStyle: { bgcolor: RED, color: WHITE },
+			options: [
+				{ id: 'page', type: 'dropdown', label: 'Page', choices: pageChoices(self), default: pageChoices(self)[0].id },
+			],
+			callback: ({ options }) => {
+				const { overlay, page } = splitPage(options.page)
+				return self.state.pages[overlay]?.page === page
+			},
+		},
+		page_auto: {
+			name: 'Overlay page: auto-advance on',
+			type: 'boolean',
+			defaultStyle: { bgcolor: GREEN, color: WHITE },
+			options: [
+				{
+					id: 'overlay',
+					type: 'dropdown',
+					label: 'Overlay',
+					choices: pagedOverlayChoices(self),
+					default: pagedOverlayChoices(self)[0].id,
+				},
+			],
+			callback: ({ options }) => !!self.state.pages[options.overlay]?.auto,
 		},
 		alerts_paused: {
 			name: 'Alerts: queue paused',

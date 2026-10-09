@@ -8,7 +8,7 @@ const { StreamPulseApi } = require('./api')
 class ModuleInstance extends InstanceBase {
 	constructor(internal) {
 		super(internal)
-		this.state = { status: null, timers: {}, goals: [], rules: [], alerts: null }
+		this.state = { status: null, timers: {}, goals: [], rules: [], alerts: null, pages: {} }
 		this.tick = 0
 	}
 
@@ -86,6 +86,14 @@ class ModuleInstance extends InstanceBase {
 				this.api.goals(),
 				withAlerts ? this.api.alerts() : Promise.resolve(null),
 			])
+			if (withAlerts) this.overlayList = await this.api.overlays()
+			const paged = (this.overlayList || []).filter((o) => o.pageCount > 1)
+			const snaps = await Promise.all(paged.map((o) => this.api.overlayPage(o.id).catch(() => null)))
+			const pages = {}
+			paged.forEach((o, i) => {
+				if (snaps[i]) pages[o.id] = { ...snaps[i], overlayName: o.name }
+			})
+			this.state.pages = pages
 			this.state.status = status
 			this.state.timers = (timers && timers.timers) || {}
 			this.state.goals = (goals && goals.items) || []
@@ -100,6 +108,7 @@ class ModuleInstance extends InstanceBase {
 				Object.values(this.state.timers).map((t) => [t.id, t.label]),
 				this.state.goals.map((g) => [g.id, g.title]),
 				this.state.rules.map((r) => [r.id, r.name]),
+				Object.values(this.state.pages).map((p) => [p.id, p.overlayName, p.pages.map((x) => [x.id, x.name])]),
 			])
 			if (sig !== this.choiceSig) {
 				this.choiceSig = sig

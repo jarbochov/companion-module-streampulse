@@ -1,4 +1,8 @@
-const slug = (id) => String(id).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
+const slug = (id) =>
+	String(id)
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '_')
+		.replace(/^_+|_+$/g, '')
 
 const STATIC_VARS = {
 	session_phase: 'Session phase (waiting / active / ended)',
@@ -29,6 +33,11 @@ function defineVariables(self) {
 		defs[`goal_${s}_percent`] = { name: `Goal ${g.title || g.id}: percent` }
 		defs[`goal_${s}_progress`] = { name: `Goal ${g.title || g.id}: progress / target` }
 	}
+	for (const o of Object.values(self.state.pages)) {
+		const s = slug(o.id)
+		defs[`overlay_${s}_page`] = { name: `Overlay ${o.overlayName}: current page` }
+		defs[`overlay_${s}_page_number`] = { name: `Overlay ${o.overlayName}: current page number` }
+	}
 	self.setVariableDefinitions(defs)
 	self.variableKeys = Object.keys(defs).join(',')
 }
@@ -56,6 +65,11 @@ function updateVariables(self) {
 		const s = slug(t.id)
 		values[`timer_${s}_remaining`] = t.formattedRemaining || ''
 		values[`timer_${s}_state`] = t.state || ''
+	}
+	for (const o of Object.values(self.state.pages)) {
+		const s = slug(o.id)
+		values[`overlay_${s}_page`] = o.name || ''
+		values[`overlay_${s}_page_number`] = `${o.index + 1}/${o.count}`
 	}
 	for (const g of goals) {
 		const s = slug(g.id)

@@ -34,6 +34,19 @@ class StreamPulseApi {
 		return this.request('/api/alerts')
 	}
 
+	overlays() {
+		return this.request('/api/custom-overlays')
+	}
+	overlayPage(id) {
+		return this.request(`/api/custom-overlays/${encodeURIComponent(id)}/page`)
+	}
+	pageAction(id, action, extra = {}) {
+		return this.request(`/api/custom-overlays/${encodeURIComponent(id)}/page`, {
+			method: 'POST',
+			body: { action, ...extra },
+		})
+	}
+
 	timerControl(id, action, params = {}) {
 		return this.request(`/api/timers/${encodeURIComponent(id)}/control`, {
 			method: 'POST',

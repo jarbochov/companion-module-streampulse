@@ -11,6 +11,8 @@ const ruleChoices = (self) => {
 	return list.length ? list : [{ id: '', label: '(no alert rules found)' }]
 }
 
+const { pageChoices, pagedOverlayChoices, splitPage } = require('./choices')
+
 module.exports = function (self) {
 	const run = (fn) => async () => {
 		try {
@@ -25,7 +27,13 @@ module.exports = function (self) {
 		timer_control: {
 			name: 'Timer: control',
 			options: [
-				{ id: 'timer', type: 'dropdown', label: 'Timer', choices: timerChoices(self), default: timerChoices(self)[0].id },
+				{
+					id: 'timer',
+					type: 'dropdown',
+					label: 'Timer',
+					choices: timerChoices(self),
+					default: timerChoices(self)[0].id,
+				},
 				{
 					id: 'action',
 					type: 'dropdown',
@@ -114,6 +122,63 @@ module.exports = function (self) {
 				{ id: 'rule', type: 'dropdown', label: 'Rule', choices: ruleChoices(self), default: ruleChoices(self)[0].id },
 			],
 			callback: async ({ options }) => run(() => self.api.alertTest(options.rule))(),
+		},
+		page_set_enabled: {
+			name: 'Overlay page: enable / disable',
+			options: [
+				{ id: 'page', type: 'dropdown', label: 'Page', choices: pageChoices(self), default: pageChoices(self)[0].id },
+				{
+					id: 'action',
+					type: 'dropdown',
+					label: 'Action',
+					choices: [
+						{ id: 'enable', label: 'Enable' },
+						{ id: 'disable', label: 'Disable' },
+						{ id: 'toggle', label: 'Toggle' },
+					],
+					default: 'toggle',
+				},
+			],
+			callback: async ({ options }) => {
+				const { overlay, page } = splitPage(options.page)
+				return run(() => self.api.pageAction(overlay, options.action, { page }))()
+			},
+		},
+		page_goto: {
+			name: 'Overlay page: show page',
+			options: [
+				{ id: 'page', type: 'dropdown', label: 'Page', choices: pageChoices(self), default: pageChoices(self)[0].id },
+			],
+			callback: async ({ options }) => {
+				const { overlay, page } = splitPage(options.page)
+				return run(() => self.api.pageAction(overlay, 'goto', { page }))()
+			},
+		},
+		page_navigate: {
+			name: 'Overlay page: navigate',
+			options: [
+				{
+					id: 'overlay',
+					type: 'dropdown',
+					label: 'Overlay',
+					choices: pagedOverlayChoices(self),
+					default: pagedOverlayChoices(self)[0].id,
+				},
+				{
+					id: 'action',
+					type: 'dropdown',
+					label: 'Action',
+					choices: [
+						{ id: 'next', label: 'Next page' },
+						{ id: 'prev', label: 'Previous page' },
+						{ id: 'first', label: 'First page' },
+						{ id: 'last', label: 'Last page' },
+						{ id: 'auto', label: 'Toggle auto-advance' },
+					],
+					default: 'next',
+				},
+			],
+			callback: async ({ options }) => run(() => self.api.pageAction(options.overlay, options.action))(),
 		},
 		end_session: {
 			name: 'Session: end and archive',
