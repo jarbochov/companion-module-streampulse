@@ -209,6 +209,49 @@ module.exports = function (self) {
 				return run(() => self.api.slideshowControl(overlay, page, options.action))()
 			},
 		},
+		music_overlay: {
+			name: 'Music overlay: show / hide',
+			options: [
+				{
+					id: 'action',
+					type: 'dropdown',
+					label: 'Action',
+					choices: [
+						{ id: 'toggle', label: 'Toggle' },
+						{ id: 'on', label: 'Show' },
+						{ id: 'off', label: 'Hide' },
+					],
+					default: 'toggle',
+				},
+			],
+			callback: async ({ options }) => run(() => self.api.musicOverlayAction(options.action))(),
+		},
+		pin_last_highlight: {
+			name: 'Highlights: pin the last chat message',
+			options: [],
+			callback: async () => run(() => self.api.pinLastHighlight())(),
+		},
+		mark_clip: {
+			name: 'Clips: mark this moment as a clip candidate',
+			options: [],
+			callback: async () => run(() => self.api.markClip('companion-button'))(),
+		},
+		alert_replay_last: {
+			name: 'Alerts: replay the last alert',
+			options: [],
+			callback: async () => {
+				const history = (self.state.alerts && self.state.alerts.history) || []
+				const stamp = (a) => Date.parse(a.shownAt || a.at) || 0
+				const last = history.slice().sort((a, b) => stamp(b) - stamp(a))[0]
+				if (!last) return self.log('warn', 'No alert history to replay')
+				return run(() => self.api.replayAlert(last.id))()
+			},
+		},
+		start_session: {
+			name: 'Session: start a new session',
+			options: [],
+			callback: async () => run(() => self.api.startSession())(),
+		},
 		end_session: {
 			name: 'Session: end and archive',
 			options: [],

@@ -8,7 +8,16 @@ const { StreamPulseApi } = require('./api')
 class ModuleInstance extends InstanceBase {
 	constructor(internal) {
 		super(internal)
-		this.state = { status: null, timers: {}, goals: [], rules: [], alerts: null, pages: {}, slideshows: [] }
+		this.state = {
+			status: null,
+			timers: {},
+			goals: [],
+			rules: [],
+			alerts: null,
+			pages: {},
+			slideshows: [],
+			musicOverlayVisible: true,
+		}
 		this.tick = 0
 	}
 
@@ -94,6 +103,8 @@ class ModuleInstance extends InstanceBase {
 				if (snaps[i]) pages[o.id] = { ...snaps[i], overlayName: o.name }
 			})
 			this.state.pages = pages
+			const overlay = await this.api.musicOverlay().catch(() => null)
+			if (overlay) this.state.musicOverlayVisible = overlay.visible !== false
 			const shows = await this.api.slideshows().catch(() => null)
 			this.state.slideshows = (shows && shows.slideshows) || []
 			this.state.status = status

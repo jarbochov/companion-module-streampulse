@@ -18,6 +18,8 @@ const STATIC_VARS = {
 	alerts_pending: 'Alerts waiting in queue',
 	alerts_paused: 'Alert queue paused (yes / no)',
 	ssn_connected: 'SocialStream connected (yes / no)',
+	twitch_connected: 'Twitch connected (yes / no)',
+	music_overlay: 'Music overlay (visible / hidden)',
 	viewers_average: 'Average viewers this session',
 	stream_uptime: 'Time since the stream went live (H:MM:SS)',
 	category_session_minutes: 'Minutes in this category this session',
@@ -106,6 +108,8 @@ function updateVariables(self) {
 		values.album = (st.music && st.music.album) || ''
 		values.music_state = (st.music && st.music.state) || ''
 		values.ssn_connected = yn(st.ssn && st.ssn.connected)
+		values.twitch_connected = yn(st.twitch && st.twitch.hasToken)
+		values.music_overlay = self.state.musicOverlayVisible === false ? 'hidden' : 'visible'
 		const v = st.viewers || {}
 		const cat = (st.stream && st.stream.category) || {}
 		const game = (st.stream && st.stream.game) || {}

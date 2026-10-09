@@ -191,6 +191,13 @@ module.exports = async function (self) {
 			],
 			callback: ({ options }) => !!findSlideshow(self, options.show)?.live,
 		},
+		music_overlay_visible: {
+			name: 'Music overlay: visible',
+			type: 'boolean',
+			defaultStyle: { bgcolor: GREEN, color: WHITE },
+			options: [],
+			callback: () => self.state.musicOverlayVisible !== false,
+		},
 		alerts_paused: {
 			name: 'Alerts: queue paused',
 			type: 'boolean',

@@ -57,6 +57,25 @@ class StreamPulseApi {
 		})
 	}
 
+	musicOverlay() {
+		return this.request('/api/music/overlay')
+	}
+	musicOverlayAction(action) {
+		return this.request('/api/music/overlay', { method: 'POST', body: { action } })
+	}
+	startSession() {
+		return this.request('/api/start-session', { method: 'POST' })
+	}
+	pinLastHighlight() {
+		return this.request('/api/highlights/pin-last', { method: 'POST' })
+	}
+	replayAlert(alertId) {
+		return this.request('/api/alerts/replay', { method: 'POST', body: { alertId } })
+	}
+	markClip(reason) {
+		return this.request('/api/clip-candidates', { method: 'POST', body: { reason } })
+	}
+
 	timerControl(id, action, params = {}) {
 		return this.request(`/api/timers/${encodeURIComponent(id)}/control`, {
 			method: 'POST',
