@@ -1,0 +1,28 @@
+{
+	"$schema": "../node_modules/@companion-module/base/assets/manifest.schema.json",
+	"type": "connection",
+	"id": "streampulse",
+	"name": "streampulse",
+	"shortname": "streampulse",
+	"description": "Control StreamPulse timers, goals, alerts and sessions, and show live stream status",
+	"version": "0.0.0",
+	"license": "MIT",
+	"repository": "git+https://github.com/jarbochov/companion-module-streampulse.git",
+	"bugs": "https://github.com/jarbochov/companion-module-streampulse/issues",
+	"maintainers": [
+		{
+			"name": "jarbochov",
+			"email": "jarbochov@users.noreply.github.com"
+		}
+	],
+	"runtime": {
+		"type": "node26",
+		"api": "nodejs-ipc",
+		"apiVersion": "0.0.0",
+		"entrypoint": "../src/main.js"
+	},
+	"legacyIds": [],
+	"manufacturer": "StreamPulse",
+	"products": ["StreamPulse"],
+	"keywords": ["streaming", "overlay", "timers", "alerts"]
+}

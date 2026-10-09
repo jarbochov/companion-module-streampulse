@@ -1,0 +1,57 @@
+class StreamPulseApi {
+	constructor(host, port) {
+		this.base = `http://${host}:${port}`
+	}
+
+	async request(path, { method = 'GET', body } = {}) {
+		const res = await fetch(this.base + path, {
+			method,
+			headers: body ? { 'Content-Type': 'application/json' } : undefined,
+			body: body ? JSON.stringify(body) : undefined,
+			signal: AbortSignal.timeout(4000),
+		})
+		const text = await res.text()
+		let data = null
+		try {
+			data = text ? JSON.parse(text) : null
+		} catch {
+			data = null
+		}
+		if (!res.ok) throw new Error((data && data.error) || `HTTP ${res.status}`)
+		return data
+	}
+
+	status() {
+		return this.request('/api/status')
+	}
+	timers() {
+		return this.request('/api/timers')
+	}
+	goals() {
+		return this.request('/api/goals')
+	}
+	alerts() {
+		return this.request('/api/alerts')
+	}
+
+	timerControl(id, action, params = {}) {
+		return this.request(`/api/timers/${encodeURIComponent(id)}/control`, {
+			method: 'POST',
+			body: { action, ...params },
+		})
+	}
+	goalAction(id, action) {
+		return this.request(`/api/goals/${encodeURIComponent(id)}/${action}`, { method: 'POST' })
+	}
+	alertQueue(action) {
+		return this.request('/api/alerts/queue', { method: 'POST', body: { action } })
+	}
+	alertTest(ruleId) {
+		return this.request('/api/alerts/test', { method: 'POST', body: { ruleId } })
+	}
+	endSession() {
+		return this.request('/api/end-session', { method: 'POST' })
+	}
+}
+
+module.exports = { StreamPulseApi }
