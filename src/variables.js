@@ -38,7 +38,7 @@ function defineVariables(self) {
 		defs[`overlay_${s}_page`] = { name: `Overlay ${o.overlayName}: current page` }
 		defs[`overlay_${s}_page_number`] = { name: `Overlay ${o.overlayName}: current page number` }
 	}
-	self.setVariableDefinitions(defs)
+	self.setVariableDefinitions(Object.entries(defs).map(([variableId, def]) => ({ variableId, name: def.name })))
 	self.variableKeys = Object.keys(defs).join(',')
 }
 
