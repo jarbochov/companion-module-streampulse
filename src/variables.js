@@ -18,7 +18,50 @@ const STATIC_VARS = {
 	alerts_pending: 'Alerts waiting in queue',
 	alerts_paused: 'Alert queue paused (yes / no)',
 	ssn_connected: 'SocialStream connected (yes / no)',
+	viewers_average: 'Average viewers this session',
+	stream_uptime: 'Time since the stream went live (H:MM:SS)',
+	category_session_minutes: 'Minutes in this category this session',
+	category_total_minutes: 'Total minutes in this category',
+	game_name: 'Game name (IGDB)',
+	game_year: 'Game release year (IGDB)',
+	game_genres: 'Game genres (IGDB)',
+	music_position: 'Music position (M:SS)',
+	music_duration: 'Music length (M:SS)',
+	music_remaining: 'Music time remaining (M:SS)',
+	music_percent: 'Music progress (percent)',
+	chat_messages: 'Chat messages this session',
+	chat_chatters: 'Unique chatters this session',
+	chat_emotes: 'Emotes used this session',
+	chat_hashtags: 'Hashtags used this session',
+	chat_raids: 'Raids this session',
+	chat_followers: 'New followers this session',
+	chat_subscribers: 'New subscribers this session',
+	top_chatter: 'Top chatter this session',
+	top_chatter_messages: 'Top chatter message count',
+	latest_event: 'Latest event (user and type)',
+	latest_follow: 'Latest follower',
+	latest_sub: 'Latest subscriber',
+	latest_gift: 'Latest gifter',
+	latest_bits: 'Latest cheer (user)',
+	latest_donation: 'Latest donation (user)',
+	latest_raid: 'Latest raider',
+	timers_running: 'Timers currently running',
+	goals_total: 'Goals configured',
+	goals_completed: 'Goals completed',
+	session_started: 'Session start time',
+	highlights_count: 'Saved highlights',
+	sessions_count: 'Archived sessions',
 }
+
+const mss = (sec) => {
+	const s = Math.max(0, Math.round(Number(sec) || 0))
+	return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+}
+const hms = (ms) => {
+	const s = Math.max(0, Math.floor(ms / 1000))
+	return `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
+}
+const clockTime = (iso) => (iso ? new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '')
 
 function defineVariables(self) {
 	const defs = {}
@@ -37,6 +80,11 @@ function defineVariables(self) {
 		const s = slug(o.id)
 		defs[`overlay_${s}_page`] = { name: `Overlay ${o.overlayName}: current page` }
 		defs[`overlay_${s}_page_number`] = { name: `Overlay ${o.overlayName}: current page number` }
+	}
+	for (const sh of self.state.slideshows) {
+		const s = slug(`${sh.overlayId}_${sh.elementId}`)
+		defs[`slideshow_${s}_position`] = { name: `Slideshow ${sh.name}: slide (position/count)` }
+		defs[`slideshow_${s}_state`] = { name: `Slideshow ${sh.name}: state (playing / paused / offline)` }
 	}
 	self.setVariableDefinitions(Object.entries(defs).map(([variableId, def]) => ({ variableId, name: def.name })))
 	self.variableKeys = Object.keys(defs).join(',')
@@ -58,6 +106,52 @@ function updateVariables(self) {
 		values.album = (st.music && st.music.album) || ''
 		values.music_state = (st.music && st.music.state) || ''
 		values.ssn_connected = yn(st.ssn && st.ssn.connected)
+		const v = st.viewers || {}
+		const cat = (st.stream && st.stream.category) || {}
+		const game = (st.stream && st.stream.game) || {}
+		const m = st.music || {}
+		const ssn = st.ssn || {}
+		values.viewers_average = Math.round(v.average || 0)
+		values.stream_uptime = v.live && st.streamStartedAt ? hms(Date.now() - Date.parse(st.streamStartedAt)) : ''
+		values.category_session_minutes = cat.sessionMinutes || 0
+		values.category_total_minutes = cat.totalMinutes || 0
+		values.game_name = game.igdbName || game.name || ''
+		values.game_year = game.releaseYear || ''
+		values.game_genres = Array.isArray(game.genres) ? game.genres.join(', ') : ''
+		values.music_position = mss(m.position)
+		values.music_duration = mss(m.duration)
+		values.music_remaining = mss((m.duration || 0) - (m.position || 0))
+		values.music_percent = m.duration ? Math.min(100, Math.round(((m.position || 0) / m.duration) * 100)) : 0
+		values.chat_messages = ssn.messages || 0
+		values.chat_chatters = ssn.chatters || 0
+		values.chat_emotes = ssn.emotes || 0
+		values.chat_hashtags = ssn.hashtags || 0
+		values.chat_raids = ssn.raids || 0
+		values.chat_followers = ssn.followers || 0
+		values.chat_subscribers = ssn.subscribers || 0
+		const top = (st.topChatters || [])[0]
+		values.top_chatter = top ? top.chatname : ''
+		values.top_chatter_messages = top ? top.messageCount : 0
+		const events = st.recentEvents || []
+		const latest = (type) => (events.find((e) => e.type === type) || {}).user || ''
+		values.latest_event = events[0] ? `${events[0].user} (${events[0].type})` : ''
+		values.latest_follow = latest('follow')
+		values.latest_sub = latest('sub')
+		values.latest_gift = latest('gift')
+		values.latest_bits = latest('bits')
+		values.latest_donation = latest('donation')
+		values.latest_raid = latest('raid')
+		values.timers_running = (st.timers && st.timers.running) || 0
+		values.goals_total = (st.goals && st.goals.total) || 0
+		values.goals_completed = (st.goals && st.goals.completed) || 0
+		values.session_started = clockTime(st.startedAt)
+		values.highlights_count = (st.library && st.library.highlights) || 0
+		values.sessions_count = (st.library && st.library.sessions) || 0
+	}
+	for (const sh of self.state.slideshows) {
+		const s = slug(`${sh.overlayId}_${sh.elementId}`)
+		values[`slideshow_${s}_position`] = sh.live ? `${sh.position}/${sh.count}` : ''
+		values[`slideshow_${s}_state`] = !sh.live ? 'offline' : sh.paused ? 'paused' : 'playing'
 	}
 	values.alerts_pending = alerts ? alerts.pending : 0
 	values.alerts_paused = yn(alerts && alerts.paused)

@@ -16,4 +16,17 @@ const splitPage = (value) => {
 	return { overlay, page: rest.join('::') }
 }
 
-module.exports = { pageChoices, pagedOverlayChoices, splitPage }
+const slideshowChoices = (self) => {
+	const list = self.state.slideshows.map((s) => ({
+		id: `${s.overlayId}::${s.elementId}`,
+		label: `${s.overlayName} / ${s.name}`,
+	}))
+	return list.length ? list : [{ id: '', label: '(no slideshows found)' }]
+}
+
+const findSlideshow = (self, value) => {
+	const { overlay, page } = splitPage(value)
+	return self.state.slideshows.find((s) => s.overlayId === overlay && s.elementId === page)
+}
+
+module.exports = { pageChoices, pagedOverlayChoices, splitPage, slideshowChoices, findSlideshow }

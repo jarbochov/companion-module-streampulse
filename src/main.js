@@ -8,7 +8,7 @@ const { StreamPulseApi } = require('./api')
 class ModuleInstance extends InstanceBase {
 	constructor(internal) {
 		super(internal)
-		this.state = { status: null, timers: {}, goals: [], rules: [], alerts: null, pages: {} }
+		this.state = { status: null, timers: {}, goals: [], rules: [], alerts: null, pages: {}, slideshows: [] }
 		this.tick = 0
 	}
 
@@ -94,6 +94,8 @@ class ModuleInstance extends InstanceBase {
 				if (snaps[i]) pages[o.id] = { ...snaps[i], overlayName: o.name }
 			})
 			this.state.pages = pages
+			const shows = await this.api.slideshows().catch(() => null)
+			this.state.slideshows = (shows && shows.slideshows) || []
 			this.state.status = status
 			this.state.timers = (timers && timers.timers) || {}
 			this.state.goals = (goals && goals.items) || []
@@ -108,6 +110,7 @@ class ModuleInstance extends InstanceBase {
 				Object.values(this.state.timers).map((t) => [t.id, t.label]),
 				this.state.goals.map((g) => [g.id, g.title]),
 				this.state.rules.map((r) => [r.id, r.name]),
+				this.state.slideshows.map((s) => [s.overlayId, s.elementId, s.name]),
 				Object.values(this.state.pages).map((p) => [p.id, p.overlayName, p.pages.map((x) => [x.id, x.name])]),
 			])
 			if (sig !== this.choiceSig) {

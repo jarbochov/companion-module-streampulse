@@ -11,7 +11,7 @@ const ruleChoices = (self) => {
 	return list.length ? list : [{ id: '', label: '(no alert rules found)' }]
 }
 
-const { pageChoices, pagedOverlayChoices, splitPage } = require('./choices')
+const { pageChoices, pagedOverlayChoices, splitPage, slideshowChoices } = require('./choices')
 
 module.exports = function (self) {
 	const run = (fn) => async () => {
@@ -179,6 +179,35 @@ module.exports = function (self) {
 				},
 			],
 			callback: async ({ options }) => run(() => self.api.pageAction(options.overlay, options.action))(),
+		},
+		slideshow_control: {
+			name: 'Slideshow: control',
+			options: [
+				{
+					id: 'show',
+					type: 'dropdown',
+					label: 'Slideshow',
+					choices: slideshowChoices(self),
+					default: slideshowChoices(self)[0].id,
+				},
+				{
+					id: 'action',
+					type: 'dropdown',
+					label: 'Action',
+					choices: [
+						{ id: 'next', label: 'Next slide' },
+						{ id: 'prev', label: 'Previous slide' },
+						{ id: 'pause', label: 'Pause' },
+						{ id: 'play', label: 'Play' },
+						{ id: 'toggle', label: 'Play / pause' },
+					],
+					default: 'next',
+				},
+			],
+			callback: async ({ options }) => {
+				const { overlay, page } = splitPage(options.show)
+				return run(() => self.api.slideshowControl(overlay, page, options.action))()
+			},
 		},
 		end_session: {
 			name: 'Session: end and archive',

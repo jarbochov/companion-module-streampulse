@@ -12,7 +12,7 @@ const RED = 0xcc0000
 const AMBER = 0xcc8800
 const WHITE = 0xffffff
 
-const { pageChoices, pagedOverlayChoices, splitPage } = require('./choices')
+const { pageChoices, pagedOverlayChoices, splitPage, slideshowChoices, findSlideshow } = require('./choices')
 
 module.exports = async function (self) {
 	self.setFeedbackDefinitions({
@@ -137,6 +137,59 @@ module.exports = async function (self) {
 				},
 			],
 			callback: ({ options }) => !!self.state.pages[options.overlay]?.auto,
+		},
+		slideshow_playing: {
+			name: 'Slideshow: playing',
+			type: 'boolean',
+			description: 'True while the slideshow is auto-advancing. Needs the overlay open in OBS or a browser.',
+			defaultStyle: { bgcolor: GREEN, color: WHITE },
+			options: [
+				{
+					id: 'show',
+					type: 'dropdown',
+					label: 'Slideshow',
+					choices: slideshowChoices(self),
+					default: slideshowChoices(self)[0].id,
+				},
+			],
+			callback: ({ options }) => {
+				const s = findSlideshow(self, options.show)
+				return !!s && s.live && !s.paused
+			},
+		},
+		slideshow_paused: {
+			name: 'Slideshow: paused',
+			type: 'boolean',
+			defaultStyle: { bgcolor: AMBER, color: WHITE },
+			options: [
+				{
+					id: 'show',
+					type: 'dropdown',
+					label: 'Slideshow',
+					choices: slideshowChoices(self),
+					default: slideshowChoices(self)[0].id,
+				},
+			],
+			callback: ({ options }) => {
+				const s = findSlideshow(self, options.show)
+				return !!s && s.live && !!s.paused
+			},
+		},
+		slideshow_live: {
+			name: 'Slideshow: overlay is open',
+			type: 'boolean',
+			description: 'True when an overlay page showing this slideshow is connected',
+			defaultStyle: { bgcolor: GREEN, color: WHITE },
+			options: [
+				{
+					id: 'show',
+					type: 'dropdown',
+					label: 'Slideshow',
+					choices: slideshowChoices(self),
+					default: slideshowChoices(self)[0].id,
+				},
+			],
+			callback: ({ options }) => !!findSlideshow(self, options.show)?.live,
 		},
 		alerts_paused: {
 			name: 'Alerts: queue paused',
