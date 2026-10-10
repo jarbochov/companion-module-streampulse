@@ -57,6 +57,12 @@ class StreamPulseApi {
 		})
 	}
 
+	overlayVisibility() {
+		return this.request('/api/overlay-visibility')
+	}
+	overlayVisibilityAction(key, action) {
+		return this.request(`/api/overlay-visibility/${encodeURIComponent(key)}`, { method: 'POST', body: { action } })
+	}
 	musicOverlay() {
 		return this.request('/api/music/overlay')
 	}

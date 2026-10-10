@@ -17,6 +17,7 @@ class ModuleInstance extends InstanceBase {
 			pages: {},
 			slideshows: [],
 			musicOverlayVisible: true,
+			overlayVisibility: [],
 		}
 		this.tick = 0
 	}
@@ -105,6 +106,8 @@ class ModuleInstance extends InstanceBase {
 			this.state.pages = pages
 			const overlay = await this.api.musicOverlay().catch(() => null)
 			if (overlay) this.state.musicOverlayVisible = overlay.visible !== false
+			const vis = await this.api.overlayVisibility().catch(() => null)
+			if (vis && vis.overlays) this.state.overlayVisibility = vis.overlays
 			const shows = await this.api.slideshows().catch(() => null)
 			this.state.slideshows = (shows && shows.slideshows) || []
 			this.state.status = status
@@ -122,6 +125,7 @@ class ModuleInstance extends InstanceBase {
 				this.state.goals.map((g) => [g.id, g.title]),
 				this.state.rules.map((r) => [r.id, r.name]),
 				this.state.slideshows.map((s) => [s.overlayId, s.elementId, s.name]),
+				this.state.overlayVisibility.map((o) => [o.key, o.label]),
 				Object.values(this.state.pages).map((p) => [p.id, p.overlayName, p.pages.map((x) => [x.id, x.name])]),
 			])
 			if (sig !== this.choiceSig) {

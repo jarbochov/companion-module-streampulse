@@ -29,4 +29,9 @@ const findSlideshow = (self, value) => {
 	return self.state.slideshows.find((s) => s.overlayId === overlay && s.elementId === page)
 }
 
-module.exports = { pageChoices, pagedOverlayChoices, splitPage, slideshowChoices, findSlideshow }
+const overlayChoices = (self) => {
+	const list = (self.state.overlayVisibility || []).map((o) => ({ id: o.key, label: o.label }))
+	return list.length ? list : [{ id: '', label: '(no overlays found)' }]
+}
+
+module.exports = { overlayChoices, pageChoices, pagedOverlayChoices, splitPage, slideshowChoices, findSlideshow }

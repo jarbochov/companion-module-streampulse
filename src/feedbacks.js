@@ -12,7 +12,14 @@ const RED = 0xcc0000
 const AMBER = 0xcc8800
 const WHITE = 0xffffff
 
-const { pageChoices, pagedOverlayChoices, splitPage, slideshowChoices, findSlideshow } = require('./choices')
+const {
+	overlayChoices,
+	pageChoices,
+	pagedOverlayChoices,
+	splitPage,
+	slideshowChoices,
+	findSlideshow,
+} = require('./choices')
 
 module.exports = async function (self) {
 	self.setFeedbackDefinitions({
@@ -190,6 +197,24 @@ module.exports = async function (self) {
 				},
 			],
 			callback: ({ options }) => !!findSlideshow(self, options.show)?.live,
+		},
+		overlay_shown: {
+			name: 'Overlay: shown',
+			type: 'boolean',
+			defaultStyle: { bgcolor: GREEN, color: WHITE },
+			options: [
+				{
+					id: 'overlay',
+					type: 'dropdown',
+					label: 'Overlay',
+					choices: overlayChoices(self),
+					default: overlayChoices(self)[0].id,
+				},
+			],
+			callback: ({ options }) => {
+				const o = (self.state.overlayVisibility || []).find((x) => x.key === options.overlay)
+				return !!o && o.visible
+			},
 		},
 		music_overlay_visible: {
 			name: 'Music overlay: visible',

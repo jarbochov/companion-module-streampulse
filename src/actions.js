@@ -11,7 +11,7 @@ const ruleChoices = (self) => {
 	return list.length ? list : [{ id: '', label: '(no alert rules found)' }]
 }
 
-const { pageChoices, pagedOverlayChoices, splitPage, slideshowChoices } = require('./choices')
+const { overlayChoices, pageChoices, pagedOverlayChoices, splitPage, slideshowChoices } = require('./choices')
 
 module.exports = function (self) {
 	const run = (fn) => async () => {
@@ -208,6 +208,30 @@ module.exports = function (self) {
 				const { overlay, page } = splitPage(options.show)
 				return run(() => self.api.slideshowControl(overlay, page, options.action))()
 			},
+		},
+		overlay_visibility: {
+			name: 'Overlay: show / hide entire overlay',
+			options: [
+				{
+					id: 'overlay',
+					type: 'dropdown',
+					label: 'Overlay',
+					choices: overlayChoices(self),
+					default: overlayChoices(self)[0].id,
+				},
+				{
+					id: 'action',
+					type: 'dropdown',
+					label: 'Action',
+					choices: [
+						{ id: 'toggle', label: 'Toggle' },
+						{ id: 'on', label: 'Show' },
+						{ id: 'off', label: 'Hide' },
+					],
+					default: 'toggle',
+				},
+			],
+			callback: async ({ options }) => run(() => self.api.overlayVisibilityAction(options.overlay, options.action))(),
 		},
 		music_overlay: {
 			name: 'Music overlay: show / hide',
