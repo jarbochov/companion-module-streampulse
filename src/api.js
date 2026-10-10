@@ -33,6 +33,12 @@ class StreamPulseApi {
 	alerts() {
 		return this.request('/api/alerts')
 	}
+	gamePlan() {
+		return this.request('/api/game-plan')
+	}
+	weather() {
+		return this.request('/api/weather')
+	}
 
 	overlays() {
 		return this.request('/api/custom-overlays')

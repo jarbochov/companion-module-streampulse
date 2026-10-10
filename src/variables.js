@@ -53,6 +53,36 @@ const STATIC_VARS = {
 	session_started: 'Session start time',
 	highlights_count: 'Saved highlights',
 	sessions_count: 'Archived sessions',
+	latest_bits_amount: 'Latest cheer amount',
+	latest_donation_amount: 'Latest donation amount',
+	latest_raid_viewers: 'Latest raid viewer count',
+	hashtag_top: 'Top hashtag overall',
+	hashtag_session_top: 'Top hashtag this session',
+	game_developer: 'Game developer (IGDB)',
+	game_rating: 'Game rating (IGDB)',
+	clip_candidates: 'Clip candidates waiting',
+	session_followers: 'New followers this session (Twitch)',
+	session_subscribers: 'New subscribers this session (Twitch)',
+	session_gift_subs: 'Gift subs this session',
+	session_bits: 'Bits this session',
+	session_donations: 'Donations this session',
+	total_followers: 'Followers (current total)',
+	total_subscribers: 'Subscribers (current total)',
+	total_gift_subs: 'Gift subs (lifetime)',
+	total_bits: 'Bits (lifetime)',
+	total_donations: 'Donations (lifetime)',
+	plan_now: 'Game Plan: playing now',
+	plan_next: 'Game Plan: next scheduled game',
+	plan_scheduled_count: 'Game Plan: scheduled games',
+	plan_backlog_count: 'Game Plan: backlog games',
+	weather_temp: 'Weather: temperature with unit',
+	weather_condition: 'Weather: condition',
+	weather_icon: 'Weather: icon (emoji)',
+	weather_feels_like: 'Weather: feels like',
+	weather_high_low: 'Weather: today high / low',
+	weather_precip: 'Weather: chance of precipitation (percent)',
+	weather_humidity: 'Weather: humidity (percent)',
+	weather_wind: 'Weather: wind with unit and direction',
 }
 
 const mss = (sec) => {
@@ -151,7 +181,45 @@ function updateVariables(self) {
 		values.session_started = clockTime(st.startedAt)
 		values.highlights_count = (st.library && st.library.highlights) || 0
 		values.sessions_count = (st.library && st.library.sessions) || 0
+		const detail = (type) => (events.find((e) => e.type === type) || {}).detail || ''
+		values.latest_bits_amount = detail('bits')
+		values.latest_donation_amount = detail('donation')
+		values.latest_raid_viewers = (detail('raid').match(/\d+/) || [''])[0]
+		const pop = st.popularHashtags || {}
+		values.hashtag_top = (pop.overall && pop.overall[0] && pop.overall[0].tag) || ''
+		values.hashtag_session_top = (pop.session && pop.session[0] && pop.session[0].tag) || ''
+		values.game_developer = (Array.isArray(game.developers) && game.developers[0]) || ''
+		values.game_rating = game.rating || ''
+		values.clip_candidates = (st.library && st.library.clipCandidates) || 0
+		const gm = st.goalMetrics || {}
+		const ses = gm.session || {}
+		const per = gm.persistent || {}
+		values.session_followers = ses.followers || 0
+		values.session_subscribers = ses.subscribers || 0
+		values.session_gift_subs = ses.gift_subs || 0
+		values.session_bits = ses.bits || 0
+		values.session_donations = ses.donations || 0
+		values.total_followers = per.followers || 0
+		values.total_subscribers = per.subscribers || 0
+		values.total_gift_subs = per.gift_subs || 0
+		values.total_bits = per.bits || 0
+		values.total_donations = per.donations || 0
 	}
+	const plan = (self.state.gamePlan && self.state.gamePlan.items) || []
+	values.plan_now = (plan.find((g) => g.playingNow) || {}).name || ''
+	values.plan_next = (plan.find((g) => g.status === 'scheduled' && !g.playingNow) || {}).name || ''
+	values.plan_scheduled_count = plan.filter((g) => g.status === 'scheduled').length
+	values.plan_backlog_count = plan.filter((g) => g.status === 'backlog').length
+	const w = self.state.weather
+	const wx = w && w.enabled && w.ok ? w : null
+	values.weather_temp = wx ? `${wx.temp}${wx.unit || ''}` : ''
+	values.weather_condition = wx ? wx.condition || '' : ''
+	values.weather_icon = wx ? wx.icon || '' : ''
+	values.weather_feels_like = wx ? `${wx.feels_like}${wx.unit || ''}` : ''
+	values.weather_high_low = wx ? `${wx.high}${wx.unit || ''} / ${wx.low}${wx.unit || ''}` : ''
+	values.weather_precip = wx ? wx.precip_chance ?? '' : ''
+	values.weather_humidity = wx ? wx.humidity ?? '' : ''
+	values.weather_wind = wx ? `${wx.wind} ${wx.wind_unit || ''} ${wx.wind_dir || ''}`.trim() : ''
 	for (const sh of self.state.slideshows) {
 		const s = slug(`${sh.overlayId}_${sh.elementId}`)
 		values[`slideshow_${s}_position`] = sh.live ? `${sh.position}/${sh.count}` : ''

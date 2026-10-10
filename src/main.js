@@ -110,6 +110,9 @@ class ModuleInstance extends InstanceBase {
 			if (vis && vis.overlays) this.state.overlayVisibility = vis.overlays
 			const shows = await this.api.slideshows().catch(() => null)
 			this.state.slideshows = (shows && shows.slideshows) || []
+			// Optional extras: a failure here shouldn't mark the whole module as disconnected
+			this.state.gamePlan = await this.api.gamePlan().catch(() => null)
+			this.state.weather = await this.api.weather().catch(() => null)
 			this.state.status = status
 			this.state.timers = (timers && timers.timers) || {}
 			this.state.goals = (goals && goals.items) || []
