@@ -40,6 +40,12 @@ const STATIC_VARS = {
 	chat_subscribers: 'New subscribers this session',
 	top_chatter: 'Top chatter this session',
 	top_chatter_messages: 'Top chatter message count',
+	last_chatter: 'Most recent chatter',
+	top_chatter_5m: 'Top chatter, last 5 minutes',
+	top_chatter_10m: 'Top chatter, last 10 minutes',
+	top_chatter_15m: 'Top chatter, last 15 minutes',
+	top_chatter_30m: 'Top chatter, last 30 minutes',
+	top_chatter_60m: 'Top chatter, last hour',
 	latest_event: 'Latest event (user and type)',
 	latest_follow: 'Latest follower',
 	latest_sub: 'Latest subscriber',
@@ -166,6 +172,11 @@ function updateVariables(self) {
 		const top = (st.topChatters || [])[0]
 		values.top_chatter = top ? top.chatname : ''
 		values.top_chatter_messages = top ? top.messageCount : 0
+		values.last_chatter = (st.recentChat || {}).last || ''
+		for (const m of [5, 10, 15, 30, 60]) {
+			const w = ((st.recentChat || {}).windows || {})[m]
+			values[`top_chatter_${m}m`] = w ? w.name : ''
+		}
 		const events = st.recentEvents || []
 		const latest = (type) => (events.find((e) => e.type === type) || {}).user || ''
 		values.latest_event = events[0] ? `${events[0].user} (${events[0].type})` : ''
