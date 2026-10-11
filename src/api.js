@@ -103,6 +103,12 @@ class StreamPulseApi {
 	alertTest(ruleId) {
 		return this.request('/api/alerts/test', { method: 'POST', body: { ruleId } })
 	}
+	restartServer() {
+		return this.request('/api/restart', { method: 'POST' })
+	}
+	stopServer() {
+		return this.request('/api/shutdown', { method: 'POST' })
+	}
 	endSession() {
 		return this.request('/api/end-session', { method: 'POST' })
 	}

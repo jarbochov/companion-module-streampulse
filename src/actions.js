@@ -271,6 +271,30 @@ module.exports = function (self) {
 				return run(() => self.api.replayAlert(last.id))()
 			},
 		},
+		restart_server: {
+			name: 'Server: restart StreamPulse',
+			description: 'Restarts the StreamPulse process; the active session continues',
+			options: [],
+			callback: async () => {
+				try {
+					await self.api.restartServer()
+				} catch (err) {
+					self.log('error', err.message)
+				}
+			},
+		},
+		stop_server: {
+			name: 'Server: stop StreamPulse',
+			description: 'Shuts StreamPulse down and archives the current session. Companion cannot start it again; use a shell script for that.',
+			options: [],
+			callback: async () => {
+				try {
+					await self.api.stopServer()
+				} catch (err) {
+					self.log('error', err.message)
+				}
+			},
+		},
 		start_session: {
 			name: 'Session: start a new session',
 			options: [],

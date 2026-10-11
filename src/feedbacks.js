@@ -23,6 +23,14 @@ const {
 
 module.exports = async function (self) {
 	self.setFeedbackDefinitions({
+		server_online: {
+			name: 'StreamPulse: server running',
+			type: 'boolean',
+			description: 'True while StreamPulse answers on the configured host and port (use Invert to show when it is down)',
+			defaultStyle: { bgcolor: GREEN, color: WHITE },
+			options: [],
+			callback: () => !!self.state.online,
+		},
 		timer_state: {
 			name: 'Timer: state',
 			type: 'boolean',

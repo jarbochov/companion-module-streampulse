@@ -5,6 +5,9 @@ const slug = (id) =>
 		.replace(/^_+|_+$/g, '')
 
 const STATIC_VARS = {
+	streampulse_online: 'StreamPulse server reachable (yes / no)',
+	streampulse_uptime: 'StreamPulse server uptime (H:MM:SS)',
+	streampulse_started: 'StreamPulse server start time (ISO)',
 	session_phase: 'Session phase (waiting / active / ended)',
 	live: 'Twitch live (yes / no)',
 	viewers: 'Current viewers',
@@ -132,6 +135,9 @@ function updateVariables(self) {
 	const { status: st, timers, goals, alerts } = self.state
 	const values = {}
 	const yn = (v) => (v ? 'yes' : 'no')
+	values.streampulse_online = yn(self.state.online)
+	values.streampulse_uptime = st && Number.isFinite(st.uptime) ? hms(st.uptime * 1000) : ''
+	values.streampulse_started = (st && st.processStartedAt) || ''
 	if (st) {
 		values.session_phase = st.sessionPhase || ''
 		values.live = yn(st.viewers && st.viewers.live)

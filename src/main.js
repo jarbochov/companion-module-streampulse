@@ -9,6 +9,7 @@ class ModuleInstance extends InstanceBase {
 	constructor(internal) {
 		super(internal)
 		this.state = {
+			online: false,
 			status: null,
 			timers: {},
 			goals: [],
@@ -120,6 +121,7 @@ class ModuleInstance extends InstanceBase {
 				this.state.alerts = alerts.queue || null
 				this.state.rules = alerts.rules || []
 			}
+			this.state.online = true
 			this.updateStatus(InstanceStatus.Ok)
 
 			// Dropdown choices depend on live data, so rebuild them when ids or names change
@@ -139,6 +141,10 @@ class ModuleInstance extends InstanceBase {
 			updateVariables(this)
 			this.checkFeedbacks()
 		} catch (err) {
+			this.state.online = false
+			this.state.status = null
+			this.setVariableValues({ streampulse_online: 'no', streampulse_uptime: '' })
+			this.checkFeedbacks('server_online')
 			this.updateStatus(InstanceStatus.ConnectionFailure, err.message)
 		} finally {
 			this.polling = false
