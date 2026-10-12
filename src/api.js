@@ -103,6 +103,9 @@ class StreamPulseApi {
 	alertTest(ruleId) {
 		return this.request('/api/alerts/test', { method: 'POST', body: { ruleId } })
 	}
+	placeholders() {
+		return this.request('/api/chatbot/placeholders')
+	}
 	variable(name, action, body = {}) {
 		const base = `/api/variables/${encodeURIComponent(name)}`
 		return this.request(action === 'set' ? base : `${base}/${action}`, { method: action === 'set' ? 'PUT' : 'POST', body })

@@ -66,6 +66,13 @@ class ModuleInstance extends InstanceBase {
 				min: 500,
 				max: 30000,
 			},
+			{
+				type: 'textinput',
+				id: 'placeholders',
+				label: 'Placeholders to expose (comma separated, e.g. chatter.top, latest.follower, game.name)',
+				width: 12,
+				default: '',
+			},
 		]
 	}
 
@@ -114,6 +121,9 @@ class ModuleInstance extends InstanceBase {
 			// Optional extras: a failure here shouldn't mark the whole module as disconnected
 			this.state.gamePlan = await this.api.gamePlan().catch(() => null)
 			this.state.weather = await this.api.weather().catch(() => null)
+			const wanted = String(this.config.placeholders || '').split(',').map((k) => k.trim()).filter(Boolean)
+			this.state.placeholders = wanted.length ? await this.api.placeholders().catch(() => ({})) : {}
+			this.state.wantedPlaceholders = wanted
 			this.state.status = status
 			this.state.timers = (timers && timers.timers) || {}
 			this.state.goals = (goals && goals.items) || []
