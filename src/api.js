@@ -103,6 +103,15 @@ class StreamPulseApi {
 	alertTest(ruleId) {
 		return this.request('/api/alerts/test', { method: 'POST', body: { ruleId } })
 	}
+	chatActivity() {
+		return this.request('/api/chatbot/activity')
+	}
+	chatEnabled(body) {
+		return this.request('/api/chatbot/enabled', { method: 'POST', body })
+	}
+	chatSend(text) {
+		return this.request('/api/chatbot/send', { method: 'POST', body: { text } })
+	}
 	placeholders() {
 		return this.request('/api/chatbot/placeholders')
 	}

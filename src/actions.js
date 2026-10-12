@@ -302,6 +302,30 @@ module.exports = function (self) {
 				}
 			},
 		},
+		chat_bot_toggle: {
+			name: 'Chat bot: turn on, off or toggle',
+			description: 'Lasts until StreamPulse restarts; the Config setting decides the start-up state',
+			options: [{ id: 'mode', type: 'dropdown', label: 'Mode', default: 'toggle', choices: [{ id: 'toggle', label: 'Toggle' }, { id: 'on', label: 'On' }, { id: 'off', label: 'Off' }] }],
+			callback: async (e) => {
+				try {
+					await self.api.chatEnabled(e.options.mode === 'toggle' ? { action: 'toggle' } : { enabled: e.options.mode === 'on' })
+					self.poll()
+				} catch (err) {
+					self.log('error', err.message)
+				}
+			},
+		},
+		chat_send: {
+			name: 'Chat bot: send a chat message',
+			options: [{ id: 'text', type: 'textinput', label: 'Message', default: '', useVariables: true }],
+			callback: async (e) => {
+				try {
+					await self.api.chatSend(await self.parseVariablesInString(e.options.text))
+				} catch (err) {
+					self.log('error', err.message)
+				}
+			},
+		},
 		restart_server: {
 			name: 'Server: restart StreamPulse',
 			description: 'Restarts the StreamPulse process; the active session continues',

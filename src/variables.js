@@ -113,6 +113,9 @@ function defineVariables(self) {
 		defs[`timer_${s}_state`] = { name: `Timer ${t.label || t.id}: state` }
 	}
 	for (const v of (self.state.status && self.state.status.customVars) || []) defs[`var_${slug(v.name)}`] = { name: `StreamPulse variable: ${v.name}` }
+	defs.chat_last_command = { name: 'Chat bot: last command or trigger used' }
+	defs.chat_last_user = { name: 'Chat bot: who used it' }
+	defs.chat_bot_state = { name: 'Chat bot: on or off' }
 	for (const k of self.state.wantedPlaceholders || []) defs[`ph_${slug(k)}`] = { name: `Placeholder: ${k}` }
 	for (const g of self.state.goals) {
 		const s = slug(g.id)
@@ -257,6 +260,9 @@ function updateVariables(self) {
 		values[`overlay_${s}_page_number`] = `${o.index + 1}/${o.count}`
 	}
 	for (const v of (st && st.customVars) || []) values[`var_${slug(v.name)}`] = String(v.value)
+	values.chat_last_command = (self.state.chatLast && self.state.chatLast.name) || ''
+	values.chat_last_user = (self.state.chatLast && self.state.chatLast.user) || ''
+	values.chat_bot_state = self.state.chatEnabled ? 'on' : 'off'
 	for (const k of self.state.wantedPlaceholders || []) values[`ph_${slug(k)}`] = String((self.state.placeholders || {})[k] ?? '')
 	for (const g of goals) {
 		const s = slug(g.id)

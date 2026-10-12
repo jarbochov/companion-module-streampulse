@@ -124,6 +124,23 @@ class ModuleInstance extends InstanceBase {
 			const wanted = String(this.config.placeholders || '').split(',').map((k) => k.trim()).filter(Boolean)
 			this.state.placeholders = wanted.length ? await this.api.placeholders().catch(() => ({})) : {}
 			this.state.wantedPlaceholders = wanted
+			const chat = await this.api.chatActivity().catch(() => null)
+			if (chat) {
+				const s = this.state
+				s.chatEnabled = chat.enabled
+				s.chatHits = s.chatHits || {}
+				const fresh = chat.activity.filter((a) => a.seq > (s.chatSeq === undefined ? chat.seq : s.chatSeq))
+				s.chatSeq = chat.seq
+				for (const a of fresh) {
+					s.chatHits[a.name.toLowerCase()] = Date.now()
+					s.chatLast = a
+				}
+				if (fresh.length) {
+					this.checkFeedbacks('chat_command_used')
+					setTimeout(() => this.checkFeedbacks('chat_command_used'), 10100)
+				}
+				this.checkFeedbacks('chat_bot_on')
+			}
 			this.state.status = status
 			this.state.timers = (timers && timers.timers) || {}
 			this.state.goals = (goals && goals.items) || []
