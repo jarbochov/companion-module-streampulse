@@ -103,6 +103,10 @@ class StreamPulseApi {
 	alertTest(ruleId) {
 		return this.request('/api/alerts/test', { method: 'POST', body: { ruleId } })
 	}
+	variable(name, action, body = {}) {
+		const base = `/api/variables/${encodeURIComponent(name)}`
+		return this.request(action === 'set' ? base : `${base}/${action}`, { method: action === 'set' ? 'PUT' : 'POST', body })
+	}
 	restartServer() {
 		return this.request('/api/restart', { method: 'POST' })
 	}

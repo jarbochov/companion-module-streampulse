@@ -112,6 +112,7 @@ function defineVariables(self) {
 		defs[`timer_${s}_remaining`] = { name: `Timer ${t.label || t.id}: time` }
 		defs[`timer_${s}_state`] = { name: `Timer ${t.label || t.id}: state` }
 	}
+	for (const v of (self.state.status && self.state.status.customVars) || []) defs[`var_${slug(v.name)}`] = { name: `StreamPulse variable: ${v.name}` }
 	for (const g of self.state.goals) {
 		const s = slug(g.id)
 		defs[`goal_${s}_percent`] = { name: `Goal ${g.title || g.id}: percent` }
@@ -254,6 +255,7 @@ function updateVariables(self) {
 		values[`overlay_${s}_page`] = o.name || ''
 		values[`overlay_${s}_page_number`] = `${o.index + 1}/${o.count}`
 	}
+	for (const v of (st && st.customVars) || []) values[`var_${slug(v.name)}`] = String(v.value)
 	for (const g of goals) {
 		const s = slug(g.id)
 		values[`goal_${s}_percent`] = `${g.percent || 0}%`
