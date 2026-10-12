@@ -29,7 +29,7 @@ module.exports = async function (self) {
 			description: 'True for a few seconds after the command (name without the prefix, e.g. lurk) or trigger is used in chat',
 			defaultStyle: { bgcolor: AMBER, color: WHITE },
 			options: [
-				{ id: 'name', type: 'textinput', label: 'Command or trigger name', default: '' },
+				{ id: 'name', type: 'textinput', label: 'Command, trigger or timed message name', default: '' },
 				{ id: 'seconds', type: 'number', label: 'Stay lit (seconds)', default: 5, min: 1, max: 10 },
 			],
 			callback: (f) => {
