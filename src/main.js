@@ -124,6 +124,16 @@ class ModuleInstance extends InstanceBase {
 			const wanted = String(this.config.placeholders || '').split(',').map((k) => k.trim()).filter(Boolean)
 			this.state.placeholders = wanted.length ? await this.api.placeholders().catch(() => ({})) : {}
 			this.state.wantedPlaceholders = wanted
+			const bot = await this.api.chatbot().catch(() => null)
+			if (bot) {
+				const opts = [
+					...(bot.commands || []).map((c) => ({ id: c.name, label: `Command: ${bot.settings.prefix}${c.name}` })),
+					...(bot.triggers || []).map((t) => ({ id: t.name || t.id, label: `Trigger: ${t.name || t.id}` })),
+					...(bot.messages || []).map((m) => ({ id: m.name || m.id, label: `Timed: ${m.name || m.id}` })),
+					...['quote', 'addquote', 'delquote'].map((n) => ({ id: n, label: `Command: ${bot.settings.prefix}${n}` })),
+				]
+				this.state.chatChoices = opts
+			}
 			const chat = await this.api.chatActivity().catch(() => null)
 			if (chat) {
 				const s = this.state
@@ -158,6 +168,7 @@ class ModuleInstance extends InstanceBase {
 				this.state.rules.map((r) => [r.id, r.name]),
 				this.state.slideshows.map((s) => [s.overlayId, s.elementId, s.name]),
 				this.state.overlayVisibility.map((o) => [o.key, o.label]),
+				(this.state.chatChoices || []).map((c) => c.id),
 				Object.values(this.state.pages).map((p) => [p.id, p.overlayName, p.pages.map((x) => [x.id, x.name])]),
 			])
 			if (sig !== this.choiceSig) {
