@@ -276,7 +276,17 @@ module.exports = function (self) {
 			description: 'Increment, decrement or reset a StreamPulse counter (created in the Chat Bot page)',
 			options: [
 				{ id: 'name', type: 'textinput', label: 'Counter name', default: '' },
-				{ id: 'action', type: 'dropdown', label: 'Action', default: 'increment', choices: [{ id: 'increment', label: 'Increment' }, { id: 'decrement', label: 'Decrement' }, { id: 'reset', label: 'Reset' }] },
+				{
+					id: 'action',
+					type: 'dropdown',
+					label: 'Action',
+					default: 'increment',
+					choices: [
+						{ id: 'increment', label: 'Increment' },
+						{ id: 'decrement', label: 'Decrement' },
+						{ id: 'reset', label: 'Reset' },
+					],
+				},
 				{ id: 'amount', type: 'number', label: 'Amount', default: 1, min: 1, max: 100000 },
 			],
 			callback: async (e) => {
@@ -305,10 +315,24 @@ module.exports = function (self) {
 		chat_bot_toggle: {
 			name: 'Chat bot: turn on, off or toggle',
 			description: 'Lasts until StreamPulse restarts; the Config setting decides the start-up state',
-			options: [{ id: 'mode', type: 'dropdown', label: 'Mode', default: 'toggle', choices: [{ id: 'toggle', label: 'Toggle' }, { id: 'on', label: 'On' }, { id: 'off', label: 'Off' }] }],
+			options: [
+				{
+					id: 'mode',
+					type: 'dropdown',
+					label: 'Mode',
+					default: 'toggle',
+					choices: [
+						{ id: 'toggle', label: 'Toggle' },
+						{ id: 'on', label: 'On' },
+						{ id: 'off', label: 'Off' },
+					],
+				},
+			],
 			callback: async (e) => {
 				try {
-					await self.api.chatEnabled(e.options.mode === 'toggle' ? { action: 'toggle' } : { enabled: e.options.mode === 'on' })
+					await self.api.chatEnabled(
+						e.options.mode === 'toggle' ? { action: 'toggle' } : { enabled: e.options.mode === 'on' },
+					)
 					self.poll()
 				} catch (err) {
 					self.log('error', err.message)
@@ -340,7 +364,8 @@ module.exports = function (self) {
 		},
 		stop_server: {
 			name: 'Server: stop StreamPulse',
-			description: 'Shuts StreamPulse down and archives the current session. Companion cannot start it again; use a shell script for that.',
+			description:
+				'Shuts StreamPulse down and archives the current session. Companion cannot start it again; use a shell script for that.',
 			options: [],
 			callback: async () => {
 				try {
@@ -369,9 +394,7 @@ module.exports = function (self) {
 		variable_roll: {
 			name: 'Variable: roll list / topic',
 			description: 'Advance or randomize a StreamPulse list variable (e.g. topic list, challenge wheel)',
-			options: [
-				{ id: 'name', type: 'textinput', label: 'List variable name', default: '' },
-			],
+			options: [{ id: 'name', type: 'textinput', label: 'List variable name', default: '' }],
 			callback: async (e) => run(() => self.api.variableRoll(e.options.name))(),
 		},
 		alert_test_event: {
@@ -397,7 +420,8 @@ module.exports = function (self) {
 				{ id: 'user', type: 'textinput', label: 'Viewer name (optional)', default: 'TestViewer' },
 				{ id: 'amount', type: 'number', label: 'Amount (bits, months, viewers)', default: 100, min: 1, max: 100000 },
 			],
-			callback: async (e) => run(() => self.api.alertTestEvent(e.options.trigger, { user: e.options.user, amount: e.options.amount }))(),
+			callback: async (e) =>
+				run(() => self.api.alertTestEvent(e.options.trigger, { user: e.options.user, amount: e.options.amount }))(),
 		},
 	})
 }

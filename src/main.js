@@ -105,9 +105,13 @@ class ModuleInstance extends InstanceBase {
 				try {
 					const msg = JSON.parse(event.data)
 					this.handleWebSocketMessage(msg)
-				} catch { /* ignore parse error */ }
+				} catch {
+					/* ignore parse error */
+				}
 			}
-			this.ws.onerror = () => { /* handled by onclose */ }
+			this.ws.onerror = () => {
+				/* handled by onclose */
+			}
 			this.ws.onclose = () => {
 				this.wsConnected = false
 				this.ws = null
@@ -128,7 +132,9 @@ class ModuleInstance extends InstanceBase {
 		if (this.wsReconnectTimer) clearTimeout(this.wsReconnectTimer)
 		this.wsReconnectTimer = null
 		if (this.ws) {
-			try { this.ws.close(); } catch {}
+			try {
+				this.ws.close()
+			} catch {}
 			this.ws = null
 		}
 		this.wsConnected = false
@@ -169,7 +175,7 @@ class ModuleInstance extends InstanceBase {
 		const interval = Math.max(500, Number(this.config.pollMs) || 1500)
 		this.pollTimer = setInterval(() => {
 			// When WebSocket is active, we only need a slow background sync
-			if (this.wsConnected && (this.tick % 5 !== 0)) {
+			if (this.wsConnected && this.tick % 5 !== 0) {
 				this.tick++
 				return
 			}
@@ -211,7 +217,10 @@ class ModuleInstance extends InstanceBase {
 			// Optional extras: a failure here shouldn't mark the whole module as disconnected
 			this.state.gamePlan = await this.api.gamePlan().catch(() => null)
 			this.state.weather = await this.api.weather().catch(() => null)
-			const wanted = String(this.config.placeholders || '').split(',').map((k) => k.trim()).filter(Boolean)
+			const wanted = String(this.config.placeholders || '')
+				.split(',')
+				.map((k) => k.trim())
+				.filter(Boolean)
 			this.state.placeholders = wanted.length ? await this.api.placeholders().catch(() => ({})) : {}
 			this.state.wantedPlaceholders = wanted
 			const bot = await this.api.chatbot().catch(() => null)
@@ -278,7 +287,7 @@ class ModuleInstance extends InstanceBase {
 				'alert_queue_paused',
 				'music_playing',
 				'music_overlay_visible',
-				'overlay_shown'
+				'overlay_shown',
 			)
 		} catch (err) {
 			this.state.online = false

@@ -92,6 +92,15 @@ const STATIC_VARS = {
 	weather_precip: 'Weather: chance of precipitation (percent)',
 	weather_humidity: 'Weather: humidity (percent)',
 	weather_wind: 'Weather: wind with unit and direction',
+	milestone_stream_number: 'Stream number (milestone count)',
+	milestone_total_hours: 'Total lifetime broadcast hours',
+	milestone_total_time: 'Total lifetime broadcast time (formatted)',
+	milestone_daily_streak: 'Daily stream streak (days)',
+	milestone_weekly_streak: 'Weekly stream streak (weeks)',
+	milestone_lifetime_chatters: 'Lifetime unique chatters',
+	milestone_lifetime_messages: 'Lifetime chat messages',
+	milestone_next_stream_goal: 'Next stream count goal',
+	milestone_next_hours_goal: 'Next broadcast hours goal',
 }
 
 const mss = (sec) => {
@@ -112,7 +121,8 @@ function defineVariables(self) {
 		defs[`timer_${s}_remaining`] = { name: `Timer ${t.label || t.id}: time` }
 		defs[`timer_${s}_state`] = { name: `Timer ${t.label || t.id}: state` }
 	}
-	for (const v of (self.state.status && self.state.status.customVars) || []) defs[`var_${slug(v.name)}`] = { name: `StreamPulse variable: ${v.name}` }
+	for (const v of (self.state.status && self.state.status.customVars) || [])
+		defs[`var_${slug(v.name)}`] = { name: `StreamPulse variable: ${v.name}` }
 	defs.chat_last_command = { name: 'Chat bot: last command or trigger used' }
 	defs.chat_last_user = { name: 'Chat bot: who used it' }
 	defs.chat_bot_state = { name: 'Chat bot: on or off' }
@@ -226,6 +236,16 @@ function updateVariables(self) {
 		values.total_gift_subs = per.gift_subs || 0
 		values.total_bits = per.bits || 0
 		values.total_donations = per.donations || 0
+		const ms = st.milestones || {}
+		values.milestone_stream_number = ms.stream_number || 0
+		values.milestone_total_hours = ms.total_hours || 0
+		values.milestone_total_time = ms.total_time || ''
+		values.milestone_daily_streak = ms.streak_days || 0
+		values.milestone_weekly_streak = ms.streak_weeks || 0
+		values.milestone_lifetime_chatters = ms.lifetime_chatters || 0
+		values.milestone_lifetime_messages = ms.lifetime_messages || 0
+		values.milestone_next_stream_goal = ms.next_stream_goal || 0
+		values.milestone_next_hours_goal = ms.next_hours_goal || 0
 	}
 	const plan = (self.state.gamePlan && self.state.gamePlan.items) || []
 	values.plan_now = (plan.find((g) => g.playingNow) || {}).name || ''
@@ -239,8 +259,8 @@ function updateVariables(self) {
 	values.weather_icon = wx ? wx.icon || '' : ''
 	values.weather_feels_like = wx ? `${wx.feels_like}${wx.unit || ''}` : ''
 	values.weather_high_low = wx ? `${wx.high}${wx.unit || ''} / ${wx.low}${wx.unit || ''}` : ''
-	values.weather_precip = wx ? wx.precip_chance ?? '' : ''
-	values.weather_humidity = wx ? wx.humidity ?? '' : ''
+	values.weather_precip = wx ? (wx.precip_chance ?? '') : ''
+	values.weather_humidity = wx ? (wx.humidity ?? '') : ''
 	values.weather_wind = wx ? `${wx.wind} ${wx.wind_unit || ''} ${wx.wind_dir || ''}`.trim() : ''
 	for (const sh of self.state.slideshows) {
 		const s = slug(`${sh.overlayId}_${sh.elementId}`)
@@ -263,7 +283,8 @@ function updateVariables(self) {
 	values.chat_last_command = (self.state.chatLast && self.state.chatLast.name) || ''
 	values.chat_last_user = (self.state.chatLast && self.state.chatLast.user) || ''
 	values.chat_bot_state = self.state.chatEnabled ? 'on' : 'off'
-	for (const k of self.state.wantedPlaceholders || []) values[`ph_${slug(k)}`] = String((self.state.placeholders || {})[k] ?? '')
+	for (const k of self.state.wantedPlaceholders || [])
+		values[`ph_${slug(k)}`] = String((self.state.placeholders || {})[k] ?? '')
 	for (const g of goals) {
 		const s = slug(g.id)
 		values[`goal_${s}_percent`] = `${g.percent || 0}%`

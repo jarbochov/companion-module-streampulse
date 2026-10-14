@@ -26,10 +26,21 @@ module.exports = async function (self) {
 		chat_command_used: {
 			name: 'Chat bot: command or trigger just used',
 			type: 'boolean',
-			description: 'True for a few seconds after the command (name without the prefix, e.g. lurk) or trigger is used in chat',
+			description:
+				'True for a few seconds after the command (name without the prefix, e.g. lurk) or trigger is used in chat',
 			defaultStyle: { bgcolor: AMBER, color: WHITE },
 			options: [
-				{ id: 'name', type: 'dropdown', label: 'Command, trigger or timed message', default: '', allowCustom: true, choices: self.state.chatChoices && self.state.chatChoices.length ? self.state.chatChoices : [{ id: '', label: '(none found)' }] },
+				{
+					id: 'name',
+					type: 'dropdown',
+					label: 'Command, trigger or timed message',
+					default: '',
+					allowCustom: true,
+					choices:
+						self.state.chatChoices && self.state.chatChoices.length
+							? self.state.chatChoices
+							: [{ id: '', label: '(none found)' }],
+				},
 				{ id: 'seconds', type: 'number', label: 'Stay lit (seconds)', default: 5, min: 1, max: 10 },
 			],
 			callback: (f) => {
@@ -47,7 +58,8 @@ module.exports = async function (self) {
 		server_online: {
 			name: 'StreamPulse: server running',
 			type: 'boolean',
-			description: 'True while StreamPulse answers on the configured host and port (use Invert to show when it is down)',
+			description:
+				'True while StreamPulse answers on the configured host and port (use Invert to show when it is down)',
 			defaultStyle: { bgcolor: GREEN, color: WHITE },
 			options: [],
 			callback: () => !!self.state.online,
