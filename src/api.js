@@ -122,6 +122,18 @@ class StreamPulseApi {
 		const base = `/api/variables/${encodeURIComponent(name)}`
 		return this.request(action === 'set' ? base : `${base}/${action}`, { method: action === 'set' ? 'PUT' : 'POST', body })
 	}
+	startSession() {
+		return this.request('/api/start-session')
+	}
+	resetSession() {
+		return this.request('/api/reset')
+	}
+	alertTestEvent(trigger, params = {}) {
+		return this.request('/api/alerts/test-event', { method: 'POST', body: { trigger, ...params } })
+	}
+	variableRoll(name) {
+		return this.request(`/api/variables/${encodeURIComponent(name)}/roll`, { method: 'POST' })
+	}
 	restartServer() {
 		return this.request('/api/restart', { method: 'POST' })
 	}

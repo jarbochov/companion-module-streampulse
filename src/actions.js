@@ -360,5 +360,44 @@ module.exports = function (self) {
 			options: [],
 			callback: async () => run(() => self.api.endSession())(),
 		},
+		reset_session_data: {
+			name: 'Session: reset chat data without archiving',
+			description: 'Clears active chat data without saving to session archives',
+			options: [],
+			callback: async () => run(() => self.api.resetSession())(),
+		},
+		variable_roll: {
+			name: 'Variable: roll list / topic',
+			description: 'Advance or randomize a StreamPulse list variable (e.g. topic list, challenge wheel)',
+			options: [
+				{ id: 'name', type: 'textinput', label: 'List variable name', default: '' },
+			],
+			callback: async (e) => run(() => self.api.variableRoll(e.options.name))(),
+		},
+		alert_test_event: {
+			name: 'Alerts: simulate stream event',
+			description: 'Test overlays by firing a simulated Twitch or stream event',
+			options: [
+				{
+					id: 'trigger',
+					type: 'dropdown',
+					label: 'Event Type',
+					default: 'follow',
+					choices: [
+						{ id: 'follow', label: 'Follow' },
+						{ id: 'sub', label: 'New Subscription' },
+						{ id: 'resub', label: 'Resub' },
+						{ id: 'gift', label: 'Gifted Sub' },
+						{ id: 'bits', label: 'Cheer / Bits' },
+						{ id: 'donation', label: 'Donation' },
+						{ id: 'raid', label: 'Raid' },
+						{ id: 'redeem', label: 'Channel Points Redeem' },
+					],
+				},
+				{ id: 'user', type: 'textinput', label: 'Viewer name (optional)', default: 'TestViewer' },
+				{ id: 'amount', type: 'number', label: 'Amount (bits, months, viewers)', default: 100, min: 1, max: 100000 },
+			],
+			callback: async (e) => run(() => self.api.alertTestEvent(e.options.trigger, { user: e.options.user, amount: e.options.amount }))(),
+		},
 	})
 }

@@ -2,6 +2,7 @@ const { InstanceBase, Regex, runEntrypoint, InstanceStatus } = require('@compani
 const UpgradeScripts = require('./upgrades')
 const UpdateActions = require('./actions')
 const UpdateFeedbacks = require('./feedbacks')
+const UpdatePresets = require('./presets')
 const { defineVariables, updateVariables } = require('./variables')
 const { StreamPulseApi } = require('./api')
 
@@ -21,23 +22,31 @@ class ModuleInstance extends InstanceBase {
 			overlayVisibility: [],
 		}
 		this.tick = 0
+		this.ws = null
+		this.wsConnected = false
+		this.wsReconnectTimer = null
 	}
 
 	async init(config) {
 		this.config = config
 		this.updateActions()
 		this.updateFeedbacks()
+		this.updatePresets()
 		defineVariables(this)
 		this.startPolling()
+		this.startWebSocket()
 	}
 
 	async destroy() {
+		this.destroyed = true
+		this.stopWebSocket()
 		this.stopPolling()
 	}
 
 	async configUpdated(config) {
 		this.config = config
 		this.startPolling()
+		this.startWebSocket()
 	}
 
 	getConfigFields() {
@@ -60,9 +69,9 @@ class ModuleInstance extends InstanceBase {
 			{
 				type: 'number',
 				id: 'pollMs',
-				label: 'Poll interval (ms)',
+				label: 'Poll interval when offline (ms)',
 				width: 4,
-				default: 1000,
+				default: 1500,
 				min: 500,
 				max: 30000,
 			},
@@ -76,6 +85,78 @@ class ModuleInstance extends InstanceBase {
 		]
 	}
 
+	startWebSocket() {
+		this.stopWebSocket()
+		if (this.destroyed) return
+		const host = (this.config.host || 'localhost').trim()
+		const port = this.config.port || '3000'
+		const url = `ws://${host}:${port}/`
+
+		try {
+			if (typeof WebSocket === 'undefined') return
+			this.ws = new WebSocket(url)
+			this.ws.onopen = () => {
+				this.wsConnected = true
+				this.log('debug', `Connected to StreamPulse WebSocket (${url})`)
+				// Refresh immediately on connection to sync state
+				this.poll()
+			}
+			this.ws.onmessage = (event) => {
+				try {
+					const msg = JSON.parse(event.data)
+					this.handleWebSocketMessage(msg)
+				} catch { /* ignore parse error */ }
+			}
+			this.ws.onerror = () => { /* handled by onclose */ }
+			this.ws.onclose = () => {
+				this.wsConnected = false
+				this.ws = null
+				if (!this.destroyed) {
+					this.wsReconnectTimer = setTimeout(() => this.startWebSocket(), 5000)
+				}
+			}
+		} catch {
+			this.wsConnected = false
+			this.ws = null
+			if (!this.destroyed) {
+				this.wsReconnectTimer = setTimeout(() => this.startWebSocket(), 5000)
+			}
+		}
+	}
+
+	stopWebSocket() {
+		if (this.wsReconnectTimer) clearTimeout(this.wsReconnectTimer)
+		this.wsReconnectTimer = null
+		if (this.ws) {
+			try { this.ws.close(); } catch {}
+			this.ws = null
+		}
+		this.wsConnected = false
+	}
+
+	handleWebSocketMessage(msg) {
+		if (!msg || typeof msg !== 'object') return
+		if (msg.type === 'timer-update' && msg.timer) {
+			const t = msg.timer
+			this.state.timers[t.id] = t
+			updateVariables(this)
+			this.checkFeedbacks('timer_state')
+		} else if (msg.type === 'alert') {
+			if (this.state.alerts) this.state.alerts.pending = (this.state.alerts.pending || 0) + 1
+			updateVariables(this)
+			this.checkFeedbacks('alert_queue_paused')
+		} else if (msg.type === 'alert-skip' || msg.type === 'alert-clear') {
+			if (this.state.alerts) this.state.alerts.pending = Math.max(0, (this.state.alerts.pending || 1) - 1)
+			updateVariables(this)
+			this.checkFeedbacks('alert_queue_paused')
+		} else if (msg.type === 'custom-overlay-page' || msg.type === 'custom-overlay-update') {
+			this.poll()
+		} else if (msg.type === 'poll-update') {
+			if (this.state.status) this.state.status.poll = msg.data
+			updateVariables(this)
+		}
+	}
+
 	startPolling() {
 		this.stopPolling()
 		const host = (this.config.host || 'localhost').trim()
@@ -84,7 +165,16 @@ class ModuleInstance extends InstanceBase {
 		this.updateStatus(InstanceStatus.Connecting)
 		this.tick = 0
 		this.poll()
-		this.pollTimer = setInterval(() => this.poll(), Math.max(500, Number(this.config.pollMs) || 1000))
+		// If WS is connected, poll less frequently as a background heartbeat; otherwise poll normally
+		const interval = Math.max(500, Number(this.config.pollMs) || 1500)
+		this.pollTimer = setInterval(() => {
+			// When WebSocket is active, we only need a slow background sync
+			if (this.wsConnected && (this.tick % 5 !== 0)) {
+				this.tick++
+				return
+			}
+			this.poll()
+		}, interval)
 	}
 
 	stopPolling() {
@@ -96,7 +186,7 @@ class ModuleInstance extends InstanceBase {
 		if (this.polling) return
 		this.polling = true
 		try {
-			// Alerts payload is large, so refresh it less often
+			// Alerts and overlays payloads are larger, so refresh them less often
 			const withAlerts = this.tick++ % 3 === 0
 			const [status, timers, goals, alerts] = await Promise.all([
 				this.api.status(),
@@ -175,9 +265,21 @@ class ModuleInstance extends InstanceBase {
 				this.choiceSig = sig
 				this.updateActions()
 				this.updateFeedbacks()
+				this.updatePresets()
 			}
 			updateVariables(this)
-			this.checkFeedbacks()
+			this.checkFeedbacks(
+				'server_online',
+				'session_live',
+				'session_phase',
+				'timer_state',
+				'goal_complete',
+				'goal_enabled',
+				'alert_queue_paused',
+				'music_playing',
+				'music_overlay_visible',
+				'overlay_shown'
+			)
 		} catch (err) {
 			this.state.online = false
 			this.state.status = null
@@ -195,6 +297,10 @@ class ModuleInstance extends InstanceBase {
 
 	updateFeedbacks() {
 		UpdateFeedbacks(this)
+	}
+
+	updatePresets() {
+		UpdatePresets(this)
 	}
 }
 
