@@ -423,5 +423,45 @@ module.exports = function (self) {
 			callback: async (e) =>
 				run(() => self.api.alertTestEvent(e.options.trigger, { user: e.options.user, amount: e.options.amount }))(),
 		},
+		randomizer_spin: {
+			name: 'Randomizer: spin wheel or roller',
+			description: 'Trigger a live randomizer spin on stream overlays',
+			options: [
+				{
+					id: 'preset',
+					type: 'textinput',
+					label: 'Preset ID (optional, leave blank for active preset)',
+					default: '',
+				},
+				{
+					id: 'mode',
+					type: 'dropdown',
+					label: 'Display Mode',
+					choices: [
+						{ id: 'roller', label: 'Slot-Machine Roller (Vertical)' },
+						{ id: 'wheel', label: 'Spinning Wheel' },
+					],
+					default: 'roller',
+				},
+				{
+					id: 'suspense',
+					type: 'dropdown',
+					label: 'Suspense Mode',
+					choices: [
+						{ id: 'normal', label: 'Smooth Deceleration (Normal)' },
+						{ id: 'tricky', label: 'Tricky Fake-Out (Suspense Nudge)' },
+					],
+					default: 'normal',
+				},
+			],
+			callback: async ({ options }) =>
+				run(() =>
+					self.api.randomizerSpin({
+						preset: options.preset || undefined,
+						mode: options.mode,
+						suspense: options.suspense,
+					})
+				)(),
+		},
 	})
 }

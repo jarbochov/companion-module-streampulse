@@ -146,6 +146,9 @@ class StreamPulseApi {
 	endSession() {
 		return this.request('/api/end-session', { method: 'POST' })
 	}
+	randomizerSpin(options = {}) {
+		return this.request('/api/randomizer/spin', { method: 'POST', body: options })
+	}
 }
 
 module.exports = { StreamPulseApi }

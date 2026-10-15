@@ -445,5 +445,34 @@ module.exports = function (self) {
 		feedbacks: [],
 	}
 
+	// ---- Randomizer & Wheel Presets ----------------------------------------
+	presets['spin_randomizer'] = {
+		type: 'button',
+		category: 'Overlays',
+		name: 'Spin Randomizer / Wheel',
+		style: {
+			text: 'SPIN\\nWHEEL',
+			size: '14',
+			color: WHITE,
+			bgcolor: PURPLE,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'randomizer_spin',
+						options: {
+							preset: '',
+							mode: 'roller',
+							suspense: 'normal',
+						},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
 	self.setPresetDefinitions(presets)
 }
