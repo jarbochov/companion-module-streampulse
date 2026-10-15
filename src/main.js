@@ -160,6 +160,19 @@ class ModuleInstance extends InstanceBase {
 		} else if (msg.type === 'poll-update') {
 			if (this.state.status) this.state.status.poll = msg.data
 			updateVariables(this)
+		} else if (msg.type === 'randomizer-spin') {
+			const d = msg.data || msg.payload || msg
+			this.state.randomizerLast = d
+			this.state.randomizerSpinning = true
+			this.checkFeedbacks('randomizer_spinning')
+			updateVariables(this)
+			const dur = Math.max(3, Number(d.duration) || 6)
+			if (this.randomizerSpinTimer) clearTimeout(this.randomizerSpinTimer)
+			this.randomizerSpinTimer = setTimeout(() => {
+				this.state.randomizerSpinning = false
+				this.checkFeedbacks('randomizer_spinning')
+				updateVariables(this)
+			}, dur * 1000)
 		}
 	}
 
@@ -186,6 +199,8 @@ class ModuleInstance extends InstanceBase {
 	stopPolling() {
 		if (this.pollTimer) clearInterval(this.pollTimer)
 		this.pollTimer = null
+		if (this.randomizerSpinTimer) clearTimeout(this.randomizerSpinTimer)
+		this.randomizerSpinTimer = null
 	}
 
 	async poll() {
@@ -217,6 +232,8 @@ class ModuleInstance extends InstanceBase {
 			// Optional extras: a failure here shouldn't mark the whole module as disconnected
 			this.state.gamePlan = await this.api.gamePlan().catch(() => null)
 			this.state.weather = await this.api.weather().catch(() => null)
+			const rand = await this.api.randomizerPresets().catch(() => null)
+			this.state.randomizerPresets = (rand && rand.presets) || []
 			const wanted = String(this.config.placeholders || '')
 				.split(',')
 				.map((k) => k.trim())
@@ -269,6 +286,7 @@ class ModuleInstance extends InstanceBase {
 				this.state.overlayVisibility.map((o) => [o.key, o.label]),
 				(this.state.chatChoices || []).map((c) => c.id),
 				Object.values(this.state.pages).map((p) => [p.id, p.overlayName, p.pages.map((x) => [x.id, x.name])]),
+				(this.state.randomizerPresets || []).map((p) => [p.id, p.name]),
 			])
 			if (sig !== this.choiceSig) {
 				this.choiceSig = sig
@@ -288,6 +306,7 @@ class ModuleInstance extends InstanceBase {
 				'music_playing',
 				'music_overlay_visible',
 				'overlay_shown',
+				'randomizer_spinning',
 			)
 		} catch (err) {
 			this.state.online = false

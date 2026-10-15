@@ -465,13 +465,53 @@ module.exports = function (self) {
 							preset: '',
 							mode: 'roller',
 							suspense: 'normal',
+							theme: '',
 						},
 					},
 				],
 				up: [],
 			},
 		],
-		feedbacks: [],
+		feedbacks: [
+			{
+				feedbackId: 'randomizer_spinning',
+				options: {},
+				style: {
+					text: 'SPINNING...',
+					bgcolor: AMBER,
+					color: WHITE,
+				},
+			},
+		],
+	}
+
+	presets['randomizer_winner_display'] = {
+		type: 'button',
+		category: 'Overlays',
+		name: 'Randomizer Winner Display',
+		style: {
+			text: 'WINNER:\\n$(streampulse:randomizer_last_winner)',
+			size: '14',
+			color: WHITE,
+			bgcolor: DARK_GRAY,
+		},
+		steps: [
+			{
+				down: [],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'randomizer_spinning',
+				options: {},
+				style: {
+					text: 'CHOOSING...',
+					bgcolor: AMBER,
+					color: WHITE,
+				},
+			},
+		],
 	}
 
 	self.setPresetDefinitions(presets)

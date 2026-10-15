@@ -149,6 +149,9 @@ class StreamPulseApi {
 	randomizerSpin(options = {}) {
 		return this.request('/api/randomizer/spin', { method: 'POST', body: options })
 	}
+	randomizerPresets() {
+		return this.request('/api/randomizer/presets')
+	}
 }
 
 module.exports = { StreamPulseApi }

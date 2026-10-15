@@ -278,5 +278,13 @@ module.exports = async function (self) {
 			options: [],
 			callback: () => !!(self.state.status && self.state.status.music && self.state.status.music.state === 'playing'),
 		},
+		randomizer_spinning: {
+			name: 'Randomizer: actively spinning',
+			type: 'boolean',
+			description: 'True while the randomizer wheel or roller is actively spinning on stream',
+			defaultStyle: { bgcolor: AMBER, color: WHITE },
+			options: [],
+			callback: () => !!self.state.randomizerSpinning,
+		},
 	})
 }

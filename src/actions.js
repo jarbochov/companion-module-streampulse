@@ -10,6 +10,10 @@ const ruleChoices = (self) => {
 	const list = self.state.rules.map((r) => ({ id: r.id, label: r.name || r.id }))
 	return list.length ? list : [{ id: '', label: '(no alert rules found)' }]
 }
+const randomizerPresetChoices = (self) => {
+	const list = (self.state.randomizerPresets || []).map((p) => ({ id: p.id, label: p.name || p.id }))
+	return [{ id: '', label: '(Active / Current Preset)' }, ...list]
+}
 
 const { overlayChoices, pageChoices, pagedOverlayChoices, splitPage, slideshowChoices } = require('./choices')
 
@@ -429,9 +433,11 @@ module.exports = function (self) {
 			options: [
 				{
 					id: 'preset',
-					type: 'textinput',
-					label: 'Preset ID (optional, leave blank for active preset)',
+					type: 'dropdown',
+					label: 'Preset',
+					choices: randomizerPresetChoices(self),
 					default: '',
+					allowCustom: true,
 				},
 				{
 					id: 'mode',
@@ -453,15 +459,35 @@ module.exports = function (self) {
 					],
 					default: 'normal',
 				},
+				{
+					id: 'theme',
+					type: 'dropdown',
+					label: 'Theme (optional)',
+					choices: [
+						{ id: '', label: '(Overlay Default / Configured Theme)' },
+						{ id: 'purple', label: 'Purple Chaos' },
+						{ id: 'rainbow', label: 'Vibrant Rainbow' },
+						{ id: 'cyberpunk', label: 'Cyberpunk Neon' },
+						{ id: 'gold', label: 'Royal Gold & Navy' },
+						{ id: 'fire', label: 'Fire & Magma' },
+						{ id: 'midnight', label: 'Midnight Nebula' },
+						{ id: 'matrix', label: 'Hacker Terminal' },
+					],
+					default: '',
+				},
 			],
-			callback: async ({ options }) =>
-				run(() =>
+			callback: async ({ options }) => {
+				self.state.randomizerSpinning = true
+				self.checkFeedbacks('randomizer_spinning')
+				await run(() =>
 					self.api.randomizerSpin({
 						preset: options.preset || undefined,
 						mode: options.mode,
 						suspense: options.suspense,
+						theme: options.theme || undefined,
 					})
-				)(),
+				)()
+			},
 		},
 	})
 }
