@@ -29,9 +29,46 @@ const findSlideshow = (self, value) => {
 	return self.state.slideshows.find((s) => s.overlayId === overlay && s.elementId === page)
 }
 
+const videoChoices = (self) => {
+	const list = (self.state.videos || []).map((v) => ({
+		id: `${v.overlayId}::${v.elementId}`,
+		label: `${v.overlayName} / ${v.name}`,
+	}))
+	return list.length ? list : [{ id: '', label: '(no videos found)' }]
+}
+
+const findVideo = (self, value) => {
+	const { overlay, page } = splitPage(value)
+	return (self.state.videos || []).find((v) => v.overlayId === overlay && v.elementId === page)
+}
+
+const cutoutChoices = (self) => {
+	const list = (self.state.cutouts || []).map((c) => ({
+		id: `${c.overlayId}::${c.elementId}`,
+		label: `${c.overlayName} / ${c.name} (${c.shape})`,
+	}))
+	return list.length ? list : [{ id: '', label: '(no cutouts found)' }]
+}
+
+const findCutout = (self, value) => {
+	const { overlay, page } = splitPage(value)
+	return (self.state.cutouts || []).find((c) => c.overlayId === overlay && c.elementId === page)
+}
+
 const overlayChoices = (self) => {
 	const list = (self.state.overlayVisibility || []).map((o) => ({ id: o.key, label: o.label }))
 	return list.length ? list : [{ id: '', label: '(no overlays found)' }]
 }
 
-module.exports = { overlayChoices, pageChoices, pagedOverlayChoices, splitPage, slideshowChoices, findSlideshow }
+module.exports = {
+	overlayChoices,
+	pageChoices,
+	pagedOverlayChoices,
+	splitPage,
+	slideshowChoices,
+	findSlideshow,
+	videoChoices,
+	findVideo,
+	cutoutChoices,
+	findCutout,
+}

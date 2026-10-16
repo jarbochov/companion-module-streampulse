@@ -63,6 +63,26 @@ class StreamPulseApi {
 		})
 	}
 
+	videos() {
+		return this.request('/api/videos')
+	}
+	videoControl(overlayId, element, action) {
+		return this.request(`/api/custom-overlays/${encodeURIComponent(overlayId)}/video`, {
+			method: 'POST',
+			body: { action, element },
+		})
+	}
+
+	cutouts() {
+		return this.request('/api/cutouts')
+	}
+	cutoutControl(overlayId, element, action) {
+		return this.request(`/api/custom-overlays/${encodeURIComponent(overlayId)}/cutout`, {
+			method: 'POST',
+			body: { action, element },
+		})
+	}
+
 	overlayVisibility() {
 		return this.request('/api/overlay-visibility')
 	}

@@ -18,6 +18,8 @@ class ModuleInstance extends InstanceBase {
 			alerts: null,
 			pages: {},
 			slideshows: [],
+			videos: [],
+			cutouts: [],
 			musicOverlayVisible: true,
 			overlayVisibility: [],
 		}
@@ -155,7 +157,12 @@ class ModuleInstance extends InstanceBase {
 			if (this.state.alerts) this.state.alerts.pending = Math.max(0, (this.state.alerts.pending || 1) - 1)
 			updateVariables(this)
 			this.checkFeedbacks('alert_queue_paused')
-		} else if (msg.type === 'custom-overlay-page' || msg.type === 'custom-overlay-update') {
+		} else if (
+			msg.type === 'custom-overlay-page' ||
+			msg.type === 'custom-overlay-update' ||
+			msg.type === 'custom-overlay-video' ||
+			msg.type === 'custom-overlay-cutout'
+		) {
 			this.poll()
 		} else if (msg.type === 'poll-update') {
 			if (this.state.status) this.state.status.poll = msg.data
@@ -229,6 +236,10 @@ class ModuleInstance extends InstanceBase {
 			if (vis && vis.overlays) this.state.overlayVisibility = vis.overlays
 			const shows = await this.api.slideshows().catch(() => null)
 			this.state.slideshows = (shows && shows.slideshows) || []
+			const vids = await this.api.videos().catch(() => null)
+			this.state.videos = (vids && vids.videos) || []
+			const cuts = await this.api.cutouts().catch(() => null)
+			this.state.cutouts = (cuts && cuts.cutouts) || []
 			// Optional extras: a failure here shouldn't mark the whole module as disconnected
 			this.state.gamePlan = await this.api.gamePlan().catch(() => null)
 			this.state.weather = await this.api.weather().catch(() => null)
@@ -283,6 +294,8 @@ class ModuleInstance extends InstanceBase {
 				this.state.goals.map((g) => [g.id, g.title]),
 				this.state.rules.map((r) => [r.id, r.name]),
 				this.state.slideshows.map((s) => [s.overlayId, s.elementId, s.name]),
+				(this.state.videos || []).map((v) => [v.overlayId, v.elementId, v.name]),
+				(this.state.cutouts || []).map((c) => [c.overlayId, c.elementId, c.name]),
 				this.state.overlayVisibility.map((o) => [o.key, o.label]),
 				(this.state.chatChoices || []).map((c) => c.id),
 				Object.values(this.state.pages).map((p) => [p.id, p.overlayName, p.pages.map((x) => [x.id, x.name])]),

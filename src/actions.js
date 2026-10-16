@@ -15,7 +15,15 @@ const randomizerPresetChoices = (self) => {
 	return [{ id: '', label: '(Active / Current Preset)' }, ...list]
 }
 
-const { overlayChoices, pageChoices, pagedOverlayChoices, splitPage, slideshowChoices } = require('./choices')
+const {
+	overlayChoices,
+	pageChoices,
+	pagedOverlayChoices,
+	splitPage,
+	slideshowChoices,
+	videoChoices,
+	cutoutChoices,
+} = require('./choices')
 
 module.exports = function (self) {
 	const run = (fn) => async () => {
@@ -211,6 +219,65 @@ module.exports = function (self) {
 			callback: async ({ options }) => {
 				const { overlay, page } = splitPage(options.show)
 				return run(() => self.api.slideshowControl(overlay, page, options.action))()
+			},
+		},
+		video_control: {
+			name: 'Overlay: video playback',
+			options: [
+				{
+					id: 'video',
+					type: 'dropdown',
+					label: 'Video element',
+					choices: videoChoices(self),
+					default: videoChoices(self)[0].id,
+				},
+				{
+					id: 'action',
+					type: 'dropdown',
+					label: 'Action',
+					choices: [
+						{ id: 'toggle', label: 'Play / Pause' },
+						{ id: 'play', label: 'Play' },
+						{ id: 'pause', label: 'Pause' },
+						{ id: 'restart', label: 'Restart' },
+						{ id: 'stop', label: 'Stop' },
+						{ id: 'toggle-mute', label: 'Toggle mute' },
+						{ id: 'mute', label: 'Mute' },
+						{ id: 'unmute', label: 'Unmute' },
+					],
+					default: 'toggle',
+				},
+			],
+			callback: async ({ options }) => {
+				const { overlay, page } = splitPage(options.video)
+				return run(() => self.api.videoControl(overlay, page, options.action))()
+			},
+		},
+		cutout_control: {
+			name: 'Overlay: cutout (alpha punchthrough)',
+			options: [
+				{
+					id: 'cutout',
+					type: 'dropdown',
+					label: 'Cutout element',
+					choices: cutoutChoices(self),
+					default: cutoutChoices(self)[0].id,
+				},
+				{
+					id: 'action',
+					type: 'dropdown',
+					label: 'Action',
+					choices: [
+						{ id: 'toggle', label: 'Toggle punchthrough hole' },
+						{ id: 'show', label: 'Punch hole (show cutout)' },
+						{ id: 'hide', label: 'Fill / cover hole (hide cutout)' },
+					],
+					default: 'toggle',
+				},
+			],
+			callback: async ({ options }) => {
+				const { overlay, page } = splitPage(options.cutout)
+				return run(() => self.api.cutoutControl(overlay, page, options.action))()
 			},
 		},
 		overlay_visibility: {
@@ -485,7 +552,7 @@ module.exports = function (self) {
 						mode: options.mode,
 						suspense: options.suspense,
 						theme: options.theme || undefined,
-					})
+					}),
 				)()
 			},
 		},
