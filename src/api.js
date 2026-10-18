@@ -135,6 +135,15 @@ class StreamPulseApi {
 	chatSend(text) {
 		return this.request('/api/chatbot/send', { method: 'POST', body: { text } })
 	}
+	chatRun(command, arg = '', user = 'StreamDeck') {
+		return this.request('/api/chatbot/run', { method: 'POST', body: { command, arg, user } })
+	}
+	chatQuote(id = '') {
+		return this.request('/api/chatbot/run', {
+			method: 'POST',
+			body: { command: 'quote', arg: id ? String(id) : '', user: 'StreamDeck' },
+		})
+	}
 	placeholders() {
 		return this.request('/api/chatbot/placeholders')
 	}
