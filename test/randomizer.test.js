@@ -53,8 +53,20 @@ test('Randomizer Companion action supports card deck mode and duration', async (
 		action.options.find((option) => option.id === 'duration').choices.map((choice) => choice.id),
 		['4', '6', '8', '10'],
 	)
-	await action.callback({ options: { preset: '', mode: 'deck', duration: '8', suspense: 'normal', theme: '' } })
-	assert.deepEqual(self.spinOptions, { preset: undefined, mode: 'deck', duration: 8, suspense: 'normal', theme: undefined })
+	const autohide = action.options.find((option) => option.id === 'autohide')
+	assert.deepEqual(autohide.choices.map((choice) => choice.id), ['8', '15', '30', '0'])
+	assert.equal(autohide.default, '8')
+	await action.callback({
+		options: { preset: '', mode: 'deck', duration: '8', autohide: '0', suspense: 'normal', theme: '' },
+	})
+	assert.deepEqual(self.spinOptions, {
+		preset: undefined,
+		mode: 'deck',
+		duration: 8,
+		autohide: 0,
+		suspense: 'normal',
+		theme: undefined,
+	})
 })
 
 test('Randomizer Companion presets display the mode and duration and include a card-deck button', () => {
@@ -63,7 +75,9 @@ test('Randomizer Companion presets display the mode and duration and include a c
 	const spinButton = self.presets.spin_randomizer
 	assert.match(spinButton.style.text, /randomizer_last_mode/)
 	assert.match(spinButton.style.text, /randomizer_last_duration/)
+	assert.equal(spinButton.steps[0].down[0].options.autohide, '8')
 	assert.equal(self.presets.spin_randomizer_deck.steps[0].down[0].options.mode, 'deck')
+	assert.equal(self.presets.spin_randomizer_deck.steps[0].down[0].options.autohide, '8')
 	assert.match(self.presets.spin_randomizer_deck.style.text, /randomizer_last_duration/)
 })
 

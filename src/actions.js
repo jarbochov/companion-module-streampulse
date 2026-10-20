@@ -596,6 +596,18 @@ module.exports = function (self) {
 					default: '6',
 				},
 				{
+					id: 'autohide',
+					type: 'dropdown',
+					label: 'Winner Auto-hide',
+					choices: [
+						{ id: '8', label: 'After 8 seconds (default)' },
+						{ id: '15', label: 'After 15 seconds' },
+						{ id: '30', label: 'After 30 seconds' },
+						{ id: '0', label: 'Never (stay visible)' },
+					],
+					default: '8',
+				},
+				{
 					id: 'suspense',
 					type: 'dropdown',
 					label: 'Suspense Mode',
@@ -630,6 +642,8 @@ module.exports = function (self) {
 						preset: options.preset || undefined,
 						mode: options.mode,
 						duration: Number(options.duration) || 6,
+						autohide:
+							options.autohide === undefined || options.autohide === '' ? 8 : Number(options.autohide),
 						suspense: options.suspense,
 						theme: options.theme || undefined,
 					}),
