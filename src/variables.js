@@ -103,7 +103,8 @@ const STATIC_VARS = {
 	milestone_next_hours_goal: 'Next broadcast hours goal',
 	randomizer_last_winner: 'Randomizer: last winner selected',
 	randomizer_last_preset: 'Randomizer: last preset ID used',
-	randomizer_last_mode: 'Randomizer: last display mode (roller / wheel)',
+	randomizer_last_mode: 'Randomizer: last display mode (roller / wheel / deck)',
+	randomizer_last_duration: 'Randomizer: last spin duration (seconds)',
 	randomizer_spinning: 'Randomizer: actively spinning (yes / no)',
 }
 
@@ -296,7 +297,8 @@ function updateVariables(self) {
 	}
 	values.randomizer_last_winner = (self.state.randomizerLast && self.state.randomizerLast.winner) || ''
 	values.randomizer_last_preset = (self.state.randomizerLast && self.state.randomizerLast.preset) || ''
-	values.randomizer_last_mode = (self.state.randomizerLast && self.state.randomizerLast.mode) || ''
+	values.randomizer_last_mode = (self.state.randomizerLast && self.state.randomizerLast.mode) || 'roller'
+	values.randomizer_last_duration = Number(self.state.randomizerLast && self.state.randomizerLast.duration) || 6
 	values.randomizer_spinning = yn(self.state.randomizerSpinning)
 
 	// Timers and goals can be added or removed at runtime

@@ -561,7 +561,7 @@ module.exports = function (self) {
 				run(() => self.api.alertTestEvent(e.options.trigger, { user: e.options.user, amount: e.options.amount }))(),
 		},
 		randomizer_spin: {
-			name: 'Randomizer: spin wheel or roller',
+			name: 'Randomizer: spin wheel, roller or card deck',
 			description: 'Trigger a live randomizer spin on stream overlays',
 			options: [
 				{
@@ -579,8 +579,21 @@ module.exports = function (self) {
 					choices: [
 						{ id: 'roller', label: 'Slot-Machine Roller (Vertical)' },
 						{ id: 'wheel', label: 'Spinning Wheel' },
+						{ id: 'deck', label: 'Physical Card Deck' },
 					],
 					default: 'roller',
+				},
+				{
+					id: 'duration',
+					type: 'dropdown',
+					label: 'Spin Duration',
+					choices: [
+						{ id: '4', label: 'Fast (4 seconds)' },
+						{ id: '6', label: 'Normal (6 seconds)' },
+						{ id: '8', label: 'Long Dramatic (8 seconds)' },
+						{ id: '10', label: 'High Stakes (10 seconds)' },
+					],
+					default: '6',
 				},
 				{
 					id: 'suspense',
@@ -616,6 +629,7 @@ module.exports = function (self) {
 					self.api.randomizerSpin({
 						preset: options.preset || undefined,
 						mode: options.mode,
+						duration: Number(options.duration) || 6,
 						suspense: options.suspense,
 						theme: options.theme || undefined,
 					}),

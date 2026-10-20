@@ -449,9 +449,9 @@ module.exports = function (self) {
 	presets['spin_randomizer'] = {
 		type: 'button',
 		category: 'Overlays',
-		name: 'Spin Randomizer / Wheel',
+		name: 'Spin Randomizer (Wheel / Roller / Deck)',
 		style: {
-			text: 'SPIN\\nWHEEL',
+			text: 'SPIN\\n$(streampulse:randomizer_last_mode)\\n$(streampulse:randomizer_last_duration)s',
 			size: '14',
 			color: WHITE,
 			bgcolor: PURPLE,
@@ -464,6 +464,7 @@ module.exports = function (self) {
 						options: {
 							preset: '',
 							mode: 'roller',
+							duration: '6',
 							suspense: 'normal',
 							theme: '',
 						},
@@ -477,7 +478,47 @@ module.exports = function (self) {
 				feedbackId: 'randomizer_spinning',
 				options: {},
 				style: {
-					text: 'SPINNING...',
+					text: 'SPINNING...\\n$(streampulse:randomizer_last_duration)s',
+					bgcolor: AMBER,
+					color: WHITE,
+				},
+			},
+		],
+	}
+
+	presets['spin_randomizer_deck'] = {
+		type: 'button',
+		category: 'Overlays',
+		name: 'Draw Randomizer Card',
+		style: {
+			text: 'DRAW\\nCARD\\n$(streampulse:randomizer_last_duration)s',
+			size: '14',
+			color: WHITE,
+			bgcolor: PURPLE,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'randomizer_spin',
+						options: {
+							preset: '',
+							mode: 'deck',
+							duration: '6',
+							suspense: 'normal',
+							theme: '',
+						},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'randomizer_spinning',
+				options: {},
+				style: {
+					text: 'DRAWING...\\n$(streampulse:randomizer_last_duration)s',
 					bgcolor: AMBER,
 					color: WHITE,
 				},
