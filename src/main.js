@@ -245,6 +245,8 @@ class ModuleInstance extends InstanceBase {
 			this.state.weather = await this.api.weather().catch(() => null)
 			const rand = await this.api.randomizerPresets().catch(() => null)
 			this.state.randomizerPresets = (rand && rand.presets) || []
+			const randomizerButtons = await this.api.randomizerButtonPresets().catch(() => null)
+			this.state.randomizerButtonPresets = (randomizerButtons && randomizerButtons.presets) || []
 			const wanted = String(this.config.placeholders || '')
 				.split(',')
 				.map((k) => k.trim())
@@ -300,6 +302,7 @@ class ModuleInstance extends InstanceBase {
 				(this.state.chatChoices || []).map((c) => c.id),
 				Object.values(this.state.pages).map((p) => [p.id, p.overlayName, p.pages.map((x) => [x.id, x.name])]),
 				(this.state.randomizerPresets || []).map((p) => [p.id, p.name]),
+				(this.state.randomizerButtonPresets || []).map((p) => [p.id, p.name]),
 			])
 			if (sig !== this.choiceSig) {
 				this.choiceSig = sig

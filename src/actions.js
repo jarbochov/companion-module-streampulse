@@ -14,6 +14,11 @@ const randomizerPresetChoices = (self) => {
 	const list = (self.state.randomizerPresets || []).map((p) => ({ id: p.id, label: p.name || p.id }))
 	return [{ id: '', label: '(Active / Current Preset)' }, ...list]
 }
+const randomizerButtonPresetChoices = (self) => [
+	{ id: '', label: '(Studio / Overlay phrase preset)' },
+	...((self.state.randomizerButtonPresets || []).map((p) => ({ id: p.id, label: p.name || p.id }))),
+	{ id: 'static', label: 'Fixed Single Title' },
+]
 const chatCommandChoices = (self) => {
 	const list = (self.state.chatChoices || []).filter((c) => !c.label.startsWith('Timed:'))
 	return list.length ? list : [{ id: '', label: '(no commands or triggers found)' }]
@@ -577,45 +582,49 @@ module.exports = function (self) {
 					type: 'dropdown',
 					label: 'Display Mode',
 					choices: [
+						{ id: '', label: '(Studio / Overlay setting)' },
 						{ id: 'roller', label: 'Slot-Machine Roller (Vertical)' },
 						{ id: 'wheel', label: 'Spinning Wheel' },
 						{ id: 'deck', label: 'Physical Card Deck' },
 					],
-					default: 'roller',
+					default: '',
 				},
 				{
 					id: 'duration',
 					type: 'dropdown',
 					label: 'Spin Duration',
 					choices: [
+						{ id: '', label: '(Studio / Overlay setting)' },
 						{ id: '4', label: 'Fast (4 seconds)' },
 						{ id: '6', label: 'Normal (6 seconds)' },
 						{ id: '8', label: 'Long Dramatic (8 seconds)' },
 						{ id: '10', label: 'High Stakes (10 seconds)' },
 					],
-					default: '6',
+					default: '',
 				},
 				{
 					id: 'autohide',
 					type: 'dropdown',
 					label: 'Winner Auto-hide',
 					choices: [
+						{ id: '', label: '(Studio / Overlay setting)' },
 						{ id: '8', label: 'After 8 seconds (default)' },
 						{ id: '15', label: 'After 15 seconds' },
 						{ id: '30', label: 'After 30 seconds' },
 						{ id: '0', label: 'Never (stay visible)' },
 					],
-					default: '8',
+					default: '',
 				},
 				{
 					id: 'suspense',
 					type: 'dropdown',
 					label: 'Suspense Mode',
 					choices: [
+						{ id: '', label: '(Studio / Overlay setting)' },
 						{ id: 'normal', label: 'Smooth Deceleration (Normal)' },
 						{ id: 'tricky', label: 'Tricky Fake-Out (Suspense Nudge)' },
 					],
-					default: 'normal',
+					default: '',
 				},
 				{
 					id: 'theme',
@@ -633,21 +642,86 @@ module.exports = function (self) {
 					],
 					default: '',
 				},
+				{
+					id: 'showButton',
+					type: 'dropdown',
+					label: 'Show on-screen spin button',
+					choices: [
+						{ id: '', label: '(Studio / Overlay setting)' },
+						{ id: 'show', label: 'Show' },
+						{ id: 'hide', label: 'Hide' },
+					],
+					default: '',
+				},
+				{
+					id: 'buttonPreset',
+					type: 'dropdown',
+					label: 'On-screen button phrase preset',
+					choices: randomizerButtonPresetChoices(self),
+					default: '',
+				},
+				{
+					id: 'buttonPhrases',
+					type: 'textinput',
+					label: 'Custom button phrases (one per line; overrides preset)',
+					default: '',
+					useVariables: true,
+					multiline: true,
+				},
+				{
+					id: 'buttonText',
+					type: 'textinput',
+					label: 'Fixed button title (optional)',
+					default: '',
+					useVariables: true,
+				},
+				{
+					id: 'winnerHeader',
+					type: 'textinput',
+					label: 'Winner headline (optional)',
+					default: '',
+					useVariables: true,
+				},
+				{
+					id: 'winnerSub',
+					type: 'textinput',
+					label: 'Winner subtitle / phrase (optional)',
+					default: '',
+					useVariables: true,
+				},
 			],
 			callback: async ({ options }) => {
 				self.state.randomizerSpinning = true
 				self.checkFeedbacks('randomizer_spinning')
-				await run(() =>
-					self.api.randomizerSpin({
+				await run(async () => {
+					const body = {
 						preset: options.preset || undefined,
-						mode: options.mode,
-						duration: Number(options.duration) || 6,
-						autohide:
-							options.autohide === undefined || options.autohide === '' ? 8 : Number(options.autohide),
-						suspense: options.suspense,
-						theme: options.theme || undefined,
-					}),
-				)()
+						inheritStudioSettings: true,
+					}
+					if (options.mode) body.mode = options.mode
+					if (options.duration) body.duration = Number(options.duration)
+					if (options.autohide !== undefined && options.autohide !== '') body.autohide = Number(options.autohide)
+					if (options.suspense) body.suspense = options.suspense
+					if (options.theme) body.theme = options.theme
+					if (options.showButton === 'show') body.showButton = true
+					if (options.showButton === 'hide') body.showButton = false
+					if (options.buttonPreset) body.buttonPreset = options.buttonPreset
+					const buttonText = await self.parseVariablesInString(options.buttonText || '')
+					if (buttonText.trim()) {
+						body.buttonText = buttonText.trim()
+						if (!options.buttonPhrases?.trim()) body.buttonPreset = 'static'
+					}
+					const phrases = await self.parseVariablesInString(options.buttonPhrases || '')
+					if (phrases.trim()) {
+						body.buttonPhrases = phrases.split(/\r?\n/).map((phrase) => phrase.trim()).filter(Boolean)
+						body.buttonPreset = 'custom'
+					}
+					const winnerHeader = await self.parseVariablesInString(options.winnerHeader || '')
+					const winnerSub = await self.parseVariablesInString(options.winnerSub || '')
+					if (winnerHeader.trim()) body.winnerHeader = winnerHeader.trim()
+					if (winnerSub.trim()) body.winnerSub = winnerSub.trim()
+					return self.api.randomizerSpin(body)
+				})()
 			},
 		},
 	})

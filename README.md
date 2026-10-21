@@ -11,7 +11,7 @@ npm run package
 
 Load it in Companion as a developer module (point Companion's module dev path at this folder's parent), then add a "StreamPulse" connection.
 
-The module polls `/api/status`, `/api/timers`, `/api/goals` and `/api/alerts`, and calls the control endpoints for actions. Randomizer buttons support the wheel, roller, or card deck at a selectable 4, 6, 8, or 10 seconds, plus winner auto-hide after 8, 15, or 30 seconds or never; the presets show the last-used mode and spin duration. See `src/` for details.
+The module polls `/api/status`, `/api/timers`, `/api/goals` and `/api/alerts`, and calls the control endpoints for actions. Randomizer actions inherit Studio/overlay settings unless overridden, and support wheel, roller, or card-deck modes, 4/6/8/10-second durations, winner auto-hide after 8/15/30 seconds or never, on-screen button visibility/phrase presets, custom phrases, and winner text. Randomizer presets show the last-used mode and spin duration. See `src/` for details.
 
 This module is for personal use and isn't submitted to Bitfocus's module list. The Bitfocus CI workflows were removed because they require yarn; restore them from the template if you publish it.
 

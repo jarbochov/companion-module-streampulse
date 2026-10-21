@@ -181,6 +181,9 @@ class StreamPulseApi {
 	randomizerPresets() {
 		return this.request('/api/randomizer/presets')
 	}
+	randomizerButtonPresets() {
+		return this.request('/api/randomizer/button-presets')
+	}
 }
 
 module.exports = { StreamPulseApi }
