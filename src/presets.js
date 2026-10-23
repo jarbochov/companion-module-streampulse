@@ -557,6 +557,32 @@ module.exports = function (self) {
 		],
 	}
 
+	presets['randomizer_restore'] = {
+		type: 'button',
+		category: 'Overlays',
+		name: 'Restore Randomizer Choices',
+		style: {
+			text: 'RESTORE\\nCHOICES\\n($(streampulse:randomizer_removed) out)',
+			size: '12',
+			color: WHITE,
+			bgcolor: DARK_GRAY,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'randomizer_restore',
+						options: {
+							preset: '',
+						},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
 	// ---- Custom Overlay Video & Cutout Presets -----------------------------
 	presets['video_play_pause'] = {
 		type: 'button',

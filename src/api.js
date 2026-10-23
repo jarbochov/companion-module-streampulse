@@ -181,6 +181,9 @@ class StreamPulseApi {
 	randomizerPresets() {
 		return this.request('/api/randomizer/presets')
 	}
+	randomizerRestore(presetId) {
+		return this.request(`/api/randomizer/presets/${encodeURIComponent(presetId)}/reset-eliminated`, { method: 'POST' })
+	}
 	randomizerButtonPresets() {
 		return this.request('/api/randomizer/button-presets')
 	}

@@ -106,6 +106,9 @@ const STATIC_VARS = {
 	randomizer_last_mode: 'Randomizer: last display mode (roller / wheel / deck)',
 	randomizer_last_duration: 'Randomizer: last spin duration (seconds)',
 	randomizer_spinning: 'Randomizer: actively spinning (yes / no)',
+	randomizer_remaining: 'Randomizer: choices left in the pool for the last-used preset',
+	randomizer_removed: 'Randomizer: choices currently removed (eliminated or taken out)',
+	randomizer_elimination: 'Randomizer: elimination mode for the last-used preset (on / off)',
 }
 
 const mss = (sec) => {
@@ -300,6 +303,13 @@ function updateVariables(self) {
 	values.randomizer_last_mode = (self.state.randomizerLast && self.state.randomizerLast.mode) || 'roller'
 	values.randomizer_last_duration = Number(self.state.randomizerLast && self.state.randomizerLast.duration) || 6
 	values.randomizer_spinning = yn(self.state.randomizerSpinning)
+	const rzPresets = self.state.randomizerPresets || []
+	const rzId = self.state.randomizerLast && self.state.randomizerLast.preset
+	const rz = rzPresets.find((p) => p.id === rzId) || (rzId ? null : rzPresets[0])
+	const rzRemoved = rz ? (rz.eliminated || []).length : 0
+	values.randomizer_remaining = rz ? Math.max(0, (rz.choices || []).length - rzRemoved) : ''
+	values.randomizer_removed = rz ? rzRemoved : ''
+	values.randomizer_elimination = rz && rz.eliminationMode ? 'on' : 'off'
 
 	// Timers and goals can be added or removed at runtime
 	const keys = Object.keys(values).sort().join(',')

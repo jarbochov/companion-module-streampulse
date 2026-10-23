@@ -179,7 +179,21 @@ class ModuleInstance extends InstanceBase {
 				this.state.randomizerSpinning = false
 				this.checkFeedbacks('randomizer_spinning')
 				updateVariables(this)
+				this.refreshRandomizerPresets()
 			}, dur * 1000)
+		} else if (msg.type === 'randomizer-state') {
+			// Resets, restores and manual removals from the Studio
+			this.refreshRandomizerPresets()
+		}
+	}
+
+	async refreshRandomizerPresets() {
+		try {
+			const rand = await this.api.randomizerPresets()
+			this.state.randomizerPresets = (rand && rand.presets) || []
+			updateVariables(this)
+		} catch {
+			/* next poll will retry */
 		}
 	}
 

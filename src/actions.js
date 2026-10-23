@@ -676,6 +676,17 @@ module.exports = function (self) {
 					useVariables: true,
 				},
 				{
+					id: 'elimination',
+					type: 'dropdown',
+					label: 'Elimination (remove winner from pool)',
+					choices: [
+						{ id: '', label: '(Preset / Studio setting)' },
+						{ id: 'on', label: 'On: remove the winner until restored' },
+						{ id: 'off', label: 'Off: keep every choice in play' },
+					],
+					default: '',
+				},
+				{
 					id: 'winnerHeader',
 					type: 'textinput',
 					label: 'Winner headline (optional)',
@@ -691,8 +702,6 @@ module.exports = function (self) {
 				},
 			],
 			callback: async ({ options }) => {
-				self.state.randomizerSpinning = true
-				self.checkFeedbacks('randomizer_spinning')
 				await run(async () => {
 					const body = {
 						preset: options.preset || undefined,
@@ -706,6 +715,8 @@ module.exports = function (self) {
 					if (options.showButton === 'show') body.showButton = true
 					if (options.showButton === 'hide') body.showButton = false
 					if (options.buttonPreset) body.buttonPreset = options.buttonPreset
+					if (options.elimination === 'on') body.eliminationMode = true
+					if (options.elimination === 'off') body.eliminationMode = false
 					const buttonText = await self.parseVariablesInString(options.buttonText || '')
 					if (buttonText.trim()) {
 						body.buttonText = buttonText.trim()
@@ -720,8 +731,41 @@ module.exports = function (self) {
 					const winnerSub = await self.parseVariablesInString(options.winnerSub || '')
 					if (winnerHeader.trim()) body.winnerHeader = winnerHeader.trim()
 					if (winnerSub.trim()) body.winnerSub = winnerSub.trim()
-					return self.api.randomizerSpin(body)
+					const res = await self.api.randomizerSpin(body)
+					if (res && res.payload && !self.wsConnected) {
+						self.state.randomizerLast = res.payload
+						self.state.randomizerSpinning = true
+						self.checkFeedbacks('randomizer_spinning')
+						const dur = Math.max(3, Number(res.payload.duration) || 6)
+						if (self.randomizerSpinTimer) clearTimeout(self.randomizerSpinTimer)
+						self.randomizerSpinTimer = setTimeout(() => {
+							self.state.randomizerSpinning = false
+							self.checkFeedbacks('randomizer_spinning')
+							updateVariables(self)
+							self.refreshRandomizerPresets()
+						}, dur * 1000)
+					}
+					return res
 				})()
+			},
+		},
+		randomizer_restore: {
+			name: 'Randomizer: restore removed choices',
+			description: 'Put every eliminated or taken-out choice back in the pool',
+			options: [
+				{
+					id: 'preset',
+					type: 'dropdown',
+					label: 'Preset',
+					choices: randomizerPresetChoices(self),
+					default: '',
+					allowCustom: true,
+				},
+			],
+			callback: async ({ options }) => {
+				const presetId = options.preset || (self.state.randomizerLast && self.state.randomizerLast.preset) || (self.state.randomizerPresets && self.state.randomizerPresets[0] && self.state.randomizerPresets[0].id)
+				if (!presetId) return
+				await run(() => self.api.randomizerRestore(presetId))()
 			},
 		},
 	})
