@@ -22,6 +22,13 @@ class ModuleInstance extends InstanceBase {
 			cutouts: [],
 			musicOverlayVisible: true,
 			overlayVisibility: [],
+			poll: null,
+			pollPresets: [],
+			matchup: null,
+			matchupPresets: [],
+			tournament: null,
+			pollTournament: null,
+			tournamentPresets: [],
 		}
 		this.tick = 0
 		this.ws = null
@@ -165,8 +172,22 @@ class ModuleInstance extends InstanceBase {
 		) {
 			this.poll()
 		} else if (msg.type === 'poll-update') {
+			this.state.poll = msg.data
 			if (this.state.status) this.state.status.poll = msg.data
 			updateVariables(this)
+			this.checkFeedbacks('poll_active')
+		} else if (msg.type === 'matchup-update') {
+			this.state.matchup = msg.data || msg.matchup || null
+			updateVariables(this)
+			this.checkFeedbacks('matchup_clock_running', 'matchup_runner_finished', 'matchup_win_ready')
+		} else if (msg.type === 'tournament-update') {
+			this.state.tournament = msg.data || msg.tournament || null
+			updateVariables(this)
+			this.checkFeedbacks('tournament_active', 'tournament_win_ready')
+		} else if (msg.type === 'poll-tournament-update') {
+			this.state.pollTournament = msg.data || msg.tournament || null
+			updateVariables(this)
+			this.checkFeedbacks('tournament_active', 'tournament_win_ready')
 		} else if (msg.type === 'randomizer-spin') {
 			const d = msg.data || msg.payload || msg
 			this.state.randomizerLast = d
@@ -259,6 +280,18 @@ class ModuleInstance extends InstanceBase {
 			this.state.weather = await this.api.weather().catch(() => null)
 			const mu = await this.api.matchup().catch(() => null)
 			this.state.matchup = (mu && mu.matchup) || null
+			const muPresets = await this.api.matchupPresets().catch(() => null)
+			this.state.matchupPresets = (muPresets && muPresets.presets) || []
+			const activePoll = await this.api.pollActive().catch(() => null)
+			if (activePoll && 'poll' in activePoll) this.state.poll = activePoll.poll
+			const pollPresets = await this.api.pollPresets().catch(() => null)
+			this.state.pollPresets = (pollPresets && pollPresets.presets) || []
+			const tour = await this.api.tournament(false).catch(() => null)
+			this.state.tournament = (tour && tour.tournament) || null
+			const pollTour = await this.api.tournament(true).catch(() => null)
+			this.state.pollTournament = (pollTour && pollTour.tournament) || null
+			const tourPresets = await this.api.tournamentPresets(false).catch(() => null)
+			this.state.tournamentPresets = (tourPresets && tourPresets.presets) || []
 			const rand = await this.api.randomizerPresets().catch(() => null)
 			this.state.randomizerPresets = (rand && rand.presets) || []
 			const randomizerButtons = await this.api.randomizerButtonPresets().catch(() => null)
@@ -319,6 +352,15 @@ class ModuleInstance extends InstanceBase {
 				Object.values(this.state.pages).map((p) => [p.id, p.overlayName, p.pages.map((x) => [x.id, x.name])]),
 				(this.state.randomizerPresets || []).map((p) => [p.id, p.name]),
 				(this.state.randomizerButtonPresets || []).map((p) => [p.id, p.name]),
+				(this.state.pollPresets || []).map((p) => [p.id, p.title || p.name]),
+				(this.state.matchupPresets || []).map((p) => [p.id, p.name || p.title]),
+				(this.state.tournamentPresets || []).map((p) => [p.id, p.name || p.title]),
+				((this.state.tournament && this.state.tournament.matches) || []).map((m) => [
+					m.id,
+					m.entrant1 && typeof m.entrant1 === 'object' ? m.entrant1.name : m.entrant1,
+					m.entrant2 && typeof m.entrant2 === 'object' ? m.entrant2.name : m.entrant2,
+					m.status,
+				]),
 			])
 			if (sig !== this.choiceSig) {
 				this.choiceSig = sig
@@ -339,6 +381,12 @@ class ModuleInstance extends InstanceBase {
 				'music_overlay_visible',
 				'overlay_shown',
 				'randomizer_spinning',
+				'poll_active',
+				'matchup_clock_running',
+				'matchup_runner_finished',
+				'matchup_win_ready',
+				'tournament_active',
+				'tournament_win_ready',
 			)
 		} catch (err) {
 			this.state.online = false

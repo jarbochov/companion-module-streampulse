@@ -412,7 +412,7 @@ module.exports = function (self) {
 		category: 'Milestones & Streaks',
 		name: 'Daily & Weekly Streaks',
 		style: {
-			text: 'STREAK\\n🔥 $(streampulse:milestone_daily_streak)d\\n⚡ $(streampulse:milestone_weekly_streak)w',
+			text: 'STREAK\\n$(streampulse:milestone_daily_streak)d daily\\n$(streampulse:milestone_weekly_streak)w weekly',
 			size: '14',
 			color: WHITE,
 			bgcolor: DARK_GRAY,
@@ -680,6 +680,582 @@ module.exports = function (self) {
 						options: {
 							action: 'toggle',
 						},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
+	// ---- Polls Presets -----------------------------------------------------
+	presets['poll_start_preset'] = {
+		type: 'button',
+		category: 'Polls',
+		name: 'Start Poll (Shows Live Votes & Timer)',
+		style: {
+			text: 'START\\nPOLL',
+			size: '14',
+			color: WHITE,
+			bgcolor: PURPLE,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'poll_start',
+						options: {
+							preset: '',
+							title: 'Chat Poll',
+							choices: 'Option 1, Option 2',
+							duration: 60,
+							blind: false,
+							subMultiplier: false,
+						},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'poll_active',
+				options: {},
+				style: {
+					text: 'POLL LIVE\\n$(streampulse:poll_total_votes)v\\n$(streampulse:poll_remaining)',
+					bgcolor: GREEN,
+					color: WHITE,
+					size: '12',
+				},
+			},
+		],
+	}
+
+	presets['poll_end_crown'] = {
+		type: 'button',
+		category: 'Polls',
+		name: 'End Poll & Crown Winner',
+		style: {
+			text: 'END POLL\\n$(streampulse:poll_leader)',
+			size: '12',
+			color: WHITE,
+			bgcolor: DARK_GRAY,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'poll_control',
+						options: { action: 'end', seconds: 30 },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'poll_active',
+				options: {},
+				style: {
+					bgcolor: AMBER,
+					color: BLACK,
+				},
+			},
+		],
+	}
+
+	presets['poll_extend_30s'] = {
+		type: 'button',
+		category: 'Polls',
+		name: 'Extend Poll +30s',
+		style: {
+			text: 'POLL\\n+30 SEC',
+			size: '14',
+			color: WHITE,
+			bgcolor: BLUE,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'poll_control',
+						options: { action: 'extend', seconds: 30 },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
+	presets['poll_cancel'] = {
+		type: 'button',
+		category: 'Polls',
+		name: 'Cancel / Dismiss Poll',
+		style: {
+			text: 'CANCEL\\nPOLL',
+			size: '14',
+			color: WHITE,
+			bgcolor: RED,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'poll_control',
+						options: { action: 'cancel', seconds: 30 },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
+	// ---- Versus & Speedrun Presets -----------------------------------------
+	presets['versus_c1_score_up'] = {
+		type: 'button',
+		category: 'Versus & Speedrun',
+		name: 'P1 Game Score +1',
+		style: {
+			text: '$(streampulse:matchup_c1_name)\\nSCORE: $(streampulse:matchup_c1_score)\\n+1 GAME',
+			size: '12',
+			color: WHITE,
+			bgcolor: RED,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'matchup_score',
+						options: { runner: 0, target: 'game', delta: 1 },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
+	presets['versus_c2_score_up'] = {
+		type: 'button',
+		category: 'Versus & Speedrun',
+		name: 'P2 Game Score +1',
+		style: {
+			text: '$(streampulse:matchup_c2_name)\\nSCORE: $(streampulse:matchup_c2_score)\\n+1 GAME',
+			size: '12',
+			color: WHITE,
+			bgcolor: BLUE,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'matchup_score',
+						options: { runner: 1, target: 'game', delta: 1 },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
+	presets['versus_c1_round_up'] = {
+		type: 'button',
+		category: 'Versus & Speedrun',
+		name: 'P1 Round +1',
+		style: {
+			text: '$(streampulse:matchup_c1_name)\\nRND: $(streampulse:matchup_c1_rounds)\\n+1 RND',
+			size: '12',
+			color: WHITE,
+			bgcolor: DARK_GRAY,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'matchup_score',
+						options: { runner: 0, target: 'round', delta: 1 },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
+	presets['versus_c2_round_up'] = {
+		type: 'button',
+		category: 'Versus & Speedrun',
+		name: 'P2 Round +1',
+		style: {
+			text: '$(streampulse:matchup_c2_name)\\nRND: $(streampulse:matchup_c2_rounds)\\n+1 RND',
+			size: '12',
+			color: WHITE,
+			bgcolor: DARK_GRAY,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'matchup_score',
+						options: { runner: 1, target: 'round', delta: 1 },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
+	presets['versus_swap_sides'] = {
+		type: 'button',
+		category: 'Versus & Speedrun',
+		name: 'Swap Sides (P1 <-> P2)',
+		style: {
+			text: 'SWAP\\nSIDES\\nP1 <-> P2',
+			size: '12',
+			color: WHITE,
+			bgcolor: DARK_GRAY,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'matchup_general',
+						options: { action: '/swap', preset: '' },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
+	presets['versus_reset_scores'] = {
+		type: 'button',
+		category: 'Versus & Speedrun',
+		name: 'Reset Match Scores (0-0)',
+		style: {
+			text: 'RESET\\nSCORES\\n0 - 0',
+			size: '12',
+			color: WHITE,
+			bgcolor: DARK_GRAY,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'matchup_general',
+						options: { action: '/reset-scores', preset: '' },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
+	presets['speedrun_race_start_all'] = {
+		type: 'button',
+		category: 'Versus & Speedrun',
+		name: 'Speedrun: Sync Start All & Master Clock',
+		style: {
+			text: 'RACE\\nSTART\\n$(streampulse:matchup_clock)',
+			size: '12',
+			color: WHITE,
+			bgcolor: DARK_GRAY,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'matchup_clock',
+						options: { action: '/clock/race/start-all' },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'matchup_clock_running',
+				options: {},
+				style: {
+					bgcolor: GREEN,
+					color: WHITE,
+				},
+			},
+		],
+	}
+
+	presets['speedrun_r1_finish'] = {
+		type: 'button',
+		category: 'Versus & Speedrun',
+		name: 'Speedrun: Runner 1 Finish Split (+Delta)',
+		style: {
+			text: 'FINISH R1\\n$(streampulse:matchup_c1_name)\\n$(streampulse:matchup_c1_delta)',
+			size: '10',
+			color: WHITE,
+			bgcolor: DARK_GRAY,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'matchup_runner',
+						options: { runner: 0, action: 'finish' },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'matchup_runner_finished',
+				options: { runner: 0 },
+				style: {
+					text: '$(streampulse:matchup_c1_place) $(streampulse:matchup_c1_name)\\n$(streampulse:matchup_c1_time)\\n$(streampulse:matchup_c1_delta)',
+					bgcolor: GREEN,
+					color: WHITE,
+					size: '10',
+				},
+			},
+		],
+	}
+
+	presets['speedrun_r2_finish'] = {
+		type: 'button',
+		category: 'Versus & Speedrun',
+		name: 'Speedrun: Runner 2 Finish Split (+Delta)',
+		style: {
+			text: 'FINISH R2\\n$(streampulse:matchup_c2_name)\\n$(streampulse:matchup_c2_delta)',
+			size: '10',
+			color: WHITE,
+			bgcolor: DARK_GRAY,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'matchup_runner',
+						options: { runner: 1, action: 'finish' },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'matchup_runner_finished',
+				options: { runner: 1 },
+				style: {
+					text: '$(streampulse:matchup_c2_place) $(streampulse:matchup_c2_name)\\n$(streampulse:matchup_c2_time)\\n$(streampulse:matchup_c2_delta)',
+					bgcolor: GREEN,
+					color: WHITE,
+					size: '10',
+				},
+			},
+		],
+	}
+
+	presets['speedrun_timers_mode_toggle'] = {
+		type: 'button',
+		category: 'Versus & Speedrun',
+		name: 'Speedrun: Toggle Reveal on Finish vs Always Show',
+		style: {
+			text: 'TIMERS\\nMODE:\\n$(streampulse:matchup_runner_timers_mode)',
+			size: '12',
+			color: WHITE,
+			bgcolor: PURPLE,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'matchup_clock',
+						options: { action: 'timers_toggle' },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
+	// ---- Tournament Bracket Presets ----------------------------------------
+	presets['tournament_e1_score_up'] = {
+		type: 'button',
+		category: 'Tournaments',
+		name: 'Tournament: Entrant 1 Game +1',
+		style: {
+			text: '$(streampulse:tournament_e1_name)\\nSCORE: $(streampulse:tournament_e1_score)\\n+1 GAME',
+			size: '12',
+			color: WHITE,
+			bgcolor: RED,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'tournament_score',
+						options: { matchId: '', entrant: 0, target: 'game', delta: 1 },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
+	presets['tournament_e2_score_up'] = {
+		type: 'button',
+		category: 'Tournaments',
+		name: 'Tournament: Entrant 2 Game +1',
+		style: {
+			text: '$(streampulse:tournament_e2_name)\\nSCORE: $(streampulse:tournament_e2_score)\\n+1 GAME',
+			size: '12',
+			color: WHITE,
+			bgcolor: BLUE,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'tournament_score',
+						options: { matchId: '', entrant: 1, target: 'game', delta: 1 },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
+	presets['tournament_e1_round_up'] = {
+		type: 'button',
+		category: 'Tournaments',
+		name: 'Tournament: Entrant 1 Round +1',
+		style: {
+			text: '$(streampulse:tournament_e1_name)\\nRND: $(streampulse:tournament_e1_rounds)\\n+1 RND',
+			size: '12',
+			color: WHITE,
+			bgcolor: DARK_GRAY,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'tournament_score',
+						options: { matchId: '', entrant: 0, target: 'round', delta: 1 },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
+	presets['tournament_e2_round_up'] = {
+		type: 'button',
+		category: 'Tournaments',
+		name: 'Tournament: Entrant 2 Round +1',
+		style: {
+			text: '$(streampulse:tournament_e2_name)\\nRND: $(streampulse:tournament_e2_rounds)\\n+1 RND',
+			size: '12',
+			color: WHITE,
+			bgcolor: DARK_GRAY,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'tournament_score',
+						options: { matchId: '', entrant: 1, target: 'round', delta: 1 },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
+	presets['tournament_advance_winner'] = {
+		type: 'button',
+		category: 'Tournaments',
+		name: 'Tournament: Confirm & Advance Winner',
+		style: {
+			text: 'ADVANCE\\nWINNER\\n$(streampulse:tournament_round)',
+			size: '12',
+			color: WHITE,
+			bgcolor: DARK_GRAY,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'tournament_advance',
+						options: { matchId: '', winner: 'auto' },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'tournament_win_ready',
+				options: {},
+				style: {
+					text: 'ADVANCE\\n$(streampulse:tournament_pending_winner)\\nTARGET MET',
+					bgcolor: GREEN,
+					color: WHITE,
+					size: '10',
+				},
+			},
+		],
+	}
+
+	presets['tournament_next_match'] = {
+		type: 'button',
+		category: 'Tournaments',
+		name: 'Tournament: Next Ready Match',
+		style: {
+			text: 'NEXT\\nMATCH\\n$(streampulse:tournament_round)',
+			size: '12',
+			color: WHITE,
+			bgcolor: PURPLE,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'tournament_control',
+						options: { action: 'next_match', matchId: '' },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
+	presets['tournament_toggle_highlight'] = {
+		type: 'button',
+		category: 'Tournaments',
+		name: 'Tournament: Toggle Live Bracket Highlight',
+		style: {
+			text: 'BRACKET\\nLIVE GLOW\\nTOGGLE',
+			size: '12',
+			color: WHITE,
+			bgcolor: DARK_GRAY,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'tournament_control',
+						options: { action: 'toggle_highlight', matchId: '' },
 					},
 				],
 				up: [],

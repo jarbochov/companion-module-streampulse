@@ -289,10 +289,95 @@ module.exports = async function (self) {
 			name: 'Versus: runner finished',
 			type: 'boolean',
 			defaultStyle: { bgcolor: GREEN, color: WHITE },
-			options: [{ id: 'runner', type: 'dropdown', label: 'Runner', choices: [{ id: 0, label: 'Runner 1' }, { id: 1, label: 'Runner 2' }], default: 0 }],
+			options: [
+				{
+					id: 'runner',
+					type: 'dropdown',
+					label: 'Runner',
+					choices: [
+						{ id: 0, label: 'Runner 1' },
+						{ id: 1, label: 'Runner 2' },
+						{ id: 2, label: 'Runner 3' },
+						{ id: 3, label: 'Runner 4' },
+					],
+					default: 0,
+				},
+			],
 			callback: ({ options }) => {
 				const c = self.state.matchup && self.state.matchup.competitors && self.state.matchup.competitors[options.runner]
 				return !!(c && c.timer && c.timer.finished)
+			},
+		},
+		matchup_win_ready: {
+			name: 'Versus: win requirement met',
+			type: 'boolean',
+			description: 'True when any competitor has reached the match target score',
+			defaultStyle: { bgcolor: GREEN, color: WHITE },
+			options: [],
+			callback: () => {
+				const mu = self.state.matchup
+				if (!mu || mu.format === 'points') return false
+				const target = Number(mu.targetScore) || 0
+				if (target <= 0) return false
+				return (mu.competitors || []).some((c) => (Number(c.score) || 0) >= target)
+			},
+		},
+		poll_active: {
+			name: 'Polls: poll actively running',
+			type: 'boolean',
+			description: 'True while an audience poll is open for voting',
+			defaultStyle: { bgcolor: GREEN, color: WHITE },
+			options: [],
+			callback: () => {
+				const p = self.state.poll || (self.state.status && self.state.status.poll)
+				return !!(p && (p.status === 'ACTIVE' || p.status === 'active' || p.active))
+			},
+		},
+		tournament_active: {
+			name: 'Tournament: bracket in progress',
+			type: 'boolean',
+			defaultStyle: { bgcolor: GREEN, color: WHITE },
+			options: [],
+			callback: () => {
+				const tr = self.state.tournament || self.state.pollTournament
+				const st = tr && String(tr.status || '').toUpperCase()
+				return st === 'ACTIVE' || st === 'IN_PROGRESS' || st === 'READY'
+			},
+		},
+		tournament_win_ready: {
+			name: 'Tournament: active match win requirement met (ready to advance)',
+			type: 'boolean',
+			description: 'True when an entrant in the active match has reached targetScore and is ready to advance',
+			defaultStyle: { bgcolor: GREEN, color: WHITE },
+			options: [],
+			callback: () => {
+				const tr = self.state.tournament
+				if (!tr || tr.scoringType === 'points' || tr.scoreFormat === 'points') return false
+				const matches = Array.isArray(tr.matches) ? tr.matches : []
+				const eName = (e) => (e && typeof e === 'object' ? e.name || '' : String(e || ''))
+				const eScore = (m, idx) => {
+					const e = idx === 0 ? m && m.entrant1 : m && m.entrant2
+					if (e && typeof e === 'object' && e.score !== undefined) return Number(e.score) || 0
+					if (m && Array.isArray(m.scores) && m.scores[idx] !== undefined) return Number(m.scores[idx]) || 0
+					return Number(idx === 0 ? m && m.score1 : m && m.score2) || 0
+				}
+				const active =
+					(tr.activeMatchId && matches.find((m) => m.id === tr.activeMatchId)) ||
+					matches.find(
+						(m) =>
+							!m.isBye &&
+							m.status !== 'COMPLETED' &&
+							m.status !== 'completed' &&
+							eName(m.entrant1) &&
+							eName(m.entrant1) !== 'TBD' &&
+							eName(m.entrant2) &&
+							eName(m.entrant2) !== 'TBD',
+					)
+				if (!active || active.status === 'COMPLETED' || active.status === 'completed') return false
+				if (active.pendingWinner) return true
+				const target = Number(active.targetScore || tr.targetScore) || 0
+				if (target <= 0) return false
+				return eScore(active, 0) >= target || eScore(active, 1) >= target
 			},
 		},
 		randomizer_spinning: {

@@ -187,8 +187,38 @@ class StreamPulseApi {
 	matchup() {
 		return this.request('/api/matchup')
 	}
+	matchupPresets() {
+		return this.request('/api/matchup/presets')
+	}
 	matchupPost(path, body = {}) {
 		return this.request(`/api/matchup${path}`, { method: 'POST', body })
+	}
+	pollActive() {
+		return this.request('/api/polls/active')
+	}
+	pollPresets() {
+		return this.request('/api/polls/presets')
+	}
+	pollCreate(body = {}) {
+		return this.request('/api/polls/create', { method: 'POST', body })
+	}
+	pollEnd() {
+		return this.request('/api/polls/end', { method: 'POST' })
+	}
+	pollCancel() {
+		return this.request('/api/polls/cancel', { method: 'POST' })
+	}
+	pollExtend(seconds = 30) {
+		return this.request('/api/polls/extend', { method: 'POST', body: { seconds } })
+	}
+	tournament(isPoll = false) {
+		return this.request(isPoll ? '/api/polls/tournament' : '/api/tournament')
+	}
+	tournamentPresets(isPoll = false) {
+		return this.request(isPoll ? '/api/polls/tournament/presets' : '/api/tournament/presets')
+	}
+	tournamentPost(path, body = {}, isPoll = false) {
+		return this.request(`${isPoll ? '/api/polls/tournament' : '/api/tournament'}${path}`, { method: 'POST', body })
 	}
 	randomizerButtonPresets() {
 		return this.request('/api/randomizer/button-presets')

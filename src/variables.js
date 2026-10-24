@@ -63,12 +63,37 @@ const STATIC_VARS = {
 	matchup_winner: 'Versus: winner',
 	matchup_c1_name: 'Versus: competitor 1 name',
 	matchup_c1_score: 'Versus: competitor 1 score',
+	matchup_c1_rounds: 'Versus: competitor 1 round wins',
 	matchup_c1_time: 'Versus: competitor 1 race time',
+	matchup_c1_delta: 'Versus: competitor 1 race finish delta',
+	matchup_c1_place: 'Versus: competitor 1 race finish placement',
 	matchup_c2_name: 'Versus: competitor 2 name',
 	matchup_c2_score: 'Versus: competitor 2 score',
+	matchup_c2_rounds: 'Versus: competitor 2 round wins',
 	matchup_c2_time: 'Versus: competitor 2 race time',
+	matchup_c2_delta: 'Versus: competitor 2 race finish delta',
+	matchup_c2_place: 'Versus: competitor 2 race finish placement',
 	matchup_clock: 'Versus: match clock',
 	matchup_clock_state: 'Versus: clock state (running / paused / off)',
+	matchup_runner_timers_mode: 'Versus: speedrun timer display mode (finish / always)',
+	poll_active: 'Polls: active poll running (yes / no)',
+	poll_title: 'Polls: current or latest poll question',
+	poll_total_votes: 'Polls: total votes cast',
+	poll_remaining: 'Polls: time remaining (M:SS)',
+	poll_leader: 'Polls: leading choice',
+	poll_winner: 'Polls: winning choice',
+	tournament_title: 'Tournament: bracket title',
+	tournament_status: 'Tournament: bracket status (setup / active / completed)',
+	tournament_format: 'Tournament: bracket format',
+	tournament_round: 'Tournament: active match round label',
+	tournament_e1_name: 'Tournament: active match entrant 1 name',
+	tournament_e1_score: 'Tournament: active match entrant 1 game score',
+	tournament_e1_rounds: 'Tournament: active match entrant 1 round wins',
+	tournament_e2_name: 'Tournament: active match entrant 2 name',
+	tournament_e2_score: 'Tournament: active match entrant 2 game score',
+	tournament_e2_rounds: 'Tournament: active match entrant 2 round wins',
+	tournament_pending_winner: 'Tournament: entrant who met win target (ready to advance)',
+	tournament_champion: 'Tournament: crowned champion',
 	goals_total: 'Goals configured',
 	goals_completed: 'Goals completed',
 	session_started: 'Session start time',
@@ -335,15 +360,93 @@ function updateVariables(self) {
 	values.matchup_phase = (mu && mu.phase) || ''
 	values.matchup_status = (mu && mu.status) || ''
 	values.matchup_winner = (mu && mu.winner) || ''
+	const clk = mu && mu.clock
+	const timersMode = clk && clk.runnerTimersMode === 'always' ? 'always' : 'finish'
+	values.matchup_runner_timers_mode = timersMode
 	for (let i = 0; i < 2; i++) {
 		const c = mc[i]
 		values[`matchup_c${i + 1}_name`] = c ? c.name || '' : ''
 		values[`matchup_c${i + 1}_score`] = c ? c.score || 0 : 0
-		values[`matchup_c${i + 1}_time`] = c && c.timer ? c.timer.finishTime || fmtT(c.timer.elapsed) : ''
+		values[`matchup_c${i + 1}_rounds`] = c ? c.rounds || 0 : 0
+		const tmr = c && c.timer
+		const showTime =
+			tmr && (tmr.finished || timersMode === 'always' || (clk && clk.mode !== 'race'))
+				? tmr.finishTime || fmtT(tmr.elapsed)
+				: ''
+		values[`matchup_c${i + 1}_time`] = showTime
+		values[`matchup_c${i + 1}_delta`] = tmr && tmr.finished ? tmr.delta || '' : ''
+		values[`matchup_c${i + 1}_place`] = tmr && tmr.finished && tmr.place ? `#${tmr.place}` : ''
 	}
-	const clk = mu && mu.clock
 	values.matchup_clock = !clk || !clk.enabled ? '' : fmtT(clk.mode === 'countdown' ? clk.remaining : clk.elapsed)
 	values.matchup_clock_state = !clk || !clk.enabled ? 'off' : clk.isRunning ? 'running' : 'paused'
+
+	const pollObj = self.state.poll || (st && st.poll) || null
+	const pollIsActive = !!(pollObj && (pollObj.status === 'ACTIVE' || pollObj.status === 'active' || pollObj.active))
+	values.poll_active = yn(pollIsActive)
+	values.poll_title = (pollObj && (pollObj.title || pollObj.question)) || ''
+	const pollChoices = (pollObj && Array.isArray(pollObj.choices) ? pollObj.choices : [])
+	const totalVotes =
+		pollObj && Number.isFinite(pollObj.totalVotes)
+			? pollObj.totalVotes
+			: pollChoices.reduce((sum, ch) => sum + (Number(ch.votes) || 0), 0)
+	values.poll_total_votes = totalVotes
+	const pollRemSec =
+		pollIsActive && pollObj.endsAt
+			? Math.max(0, Math.ceil((Date.parse(pollObj.endsAt) - Date.now()) / 1000))
+			: Number(pollObj && pollObj.remaining) || 0
+	values.poll_remaining = pollIsActive ? mss(pollRemSec) : ''
+	const sortedChoices = pollChoices.slice().sort((a, b) => (Number(b.votes) || 0) - (Number(a.votes) || 0))
+	values.poll_leader = sortedChoices[0] && (Number(sortedChoices[0].votes) || 0) > 0 ? sortedChoices[0].label || '' : ''
+	values.poll_winner =
+		(pollObj && (pollObj.winnerLabel || (pollObj.winner && pollObj.winner.label) || pollObj.winner)) || ''
+
+	const tr = self.state.tournament || self.state.pollTournament || null
+	values.tournament_title = (tr && tr.title) || ''
+	values.tournament_status = (tr && tr.status) || ''
+	values.tournament_format = (tr && tr.format) || ''
+	values.tournament_champion = (tr && tr.champion) || ''
+	const trMatches = (tr && Array.isArray(tr.matches) ? tr.matches : [])
+	const eName = (e) => (e && typeof e === 'object' ? e.name || '' : String(e || ''))
+	const eScore = (m, idx) => {
+		const e = idx === 0 ? m && m.entrant1 : m && m.entrant2
+		if (e && typeof e === 'object' && e.score !== undefined) return Number(e.score) || 0
+		if (m && Array.isArray(m.scores) && m.scores[idx] !== undefined) return Number(m.scores[idx]) || 0
+		return Number(idx === 0 ? m && m.score1 : m && m.score2) || 0
+	}
+	const eRounds = (m, idx) => {
+		const e = idx === 0 ? m && m.entrant1 : m && m.entrant2
+		if (e && typeof e === 'object' && e.rounds !== undefined) return Number(e.rounds) || 0
+		return Number(idx === 0 ? m && m.rounds1 : m && m.rounds2) || 0
+	}
+	const activeMatch =
+		(tr && tr.activeMatchId && trMatches.find((m) => m.id === tr.activeMatchId)) ||
+		trMatches.find(
+			(m) =>
+				!m.isBye &&
+				m.status !== 'COMPLETED' &&
+				m.status !== 'completed' &&
+				eName(m.entrant1) &&
+				eName(m.entrant1) !== 'TBD' &&
+				eName(m.entrant2) &&
+				eName(m.entrant2) !== 'TBD',
+		) ||
+		null
+	values.tournament_round = (activeMatch && (activeMatch.roundName || activeMatch.roundLabel || activeMatch.label)) || ''
+	values.tournament_e1_name = activeMatch ? eName(activeMatch.entrant1) : ''
+	values.tournament_e1_score = activeMatch ? eScore(activeMatch, 0) : 0
+	values.tournament_e1_rounds = activeMatch ? eRounds(activeMatch, 0) : 0
+	values.tournament_e2_name = activeMatch ? eName(activeMatch.entrant2) : ''
+	values.tournament_e2_score = activeMatch ? eScore(activeMatch, 1) : 0
+	values.tournament_e2_rounds = activeMatch ? eRounds(activeMatch, 1) : 0
+	let pendingWinner = (activeMatch && activeMatch.pendingWinner) || ''
+	if (!pendingWinner && tr && activeMatch && activeMatch.status !== 'COMPLETED' && activeMatch.status !== 'completed') {
+		const target = Number(activeMatch.targetScore || tr.targetScore) || 0
+		if (target > 0 && tr.scoringType !== 'points' && tr.scoreFormat !== 'points') {
+			if (eScore(activeMatch, 0) >= target) pendingWinner = eName(activeMatch.entrant1)
+			else if (eScore(activeMatch, 1) >= target) pendingWinner = eName(activeMatch.entrant2)
+		}
+	}
+	values.tournament_pending_winner = pendingWinner
 
 	// Timers and goals can be added or removed at runtime
 	const keys = Object.keys(values).sort().join(',')
