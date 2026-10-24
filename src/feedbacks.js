@@ -278,6 +278,23 @@ module.exports = async function (self) {
 			options: [],
 			callback: () => !!(self.state.status && self.state.status.music && self.state.status.music.state === 'playing'),
 		},
+		matchup_clock_running: {
+			name: 'Versus: clock running',
+			type: 'boolean',
+			defaultStyle: { bgcolor: GREEN, color: WHITE },
+			options: [],
+			callback: () => !!(self.state.matchup && self.state.matchup.clock && self.state.matchup.clock.isRunning),
+		},
+		matchup_runner_finished: {
+			name: 'Versus: runner finished',
+			type: 'boolean',
+			defaultStyle: { bgcolor: GREEN, color: WHITE },
+			options: [{ id: 'runner', type: 'dropdown', label: 'Runner', choices: [{ id: 0, label: 'Runner 1' }, { id: 1, label: 'Runner 2' }], default: 0 }],
+			callback: ({ options }) => {
+				const c = self.state.matchup && self.state.matchup.competitors && self.state.matchup.competitors[options.runner]
+				return !!(c && c.timer && c.timer.finished)
+			},
+		},
 		randomizer_spinning: {
 			name: 'Randomizer: actively spinning',
 			type: 'boolean',

@@ -257,6 +257,8 @@ class ModuleInstance extends InstanceBase {
 			// Optional extras: a failure here shouldn't mark the whole module as disconnected
 			this.state.gamePlan = await this.api.gamePlan().catch(() => null)
 			this.state.weather = await this.api.weather().catch(() => null)
+			const mu = await this.api.matchup().catch(() => null)
+			this.state.matchup = (mu && mu.matchup) || null
 			const rand = await this.api.randomizerPresets().catch(() => null)
 			this.state.randomizerPresets = (rand && rand.presets) || []
 			const randomizerButtons = await this.api.randomizerButtonPresets().catch(() => null)

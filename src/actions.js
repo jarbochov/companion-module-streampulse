@@ -749,6 +749,78 @@ module.exports = function (self) {
 				})()
 			},
 		},
+		matchup_score: {
+			name: 'Versus: change score',
+			options: [
+				{ id: 'runner', type: 'dropdown', label: 'Competitor', choices: [{ id: 0, label: 'Competitor 1' }, { id: 1, label: 'Competitor 2' }], default: 0 },
+				{ id: 'delta', type: 'number', label: 'Change (+/-)', default: 1, min: -100, max: 100 },
+			],
+			callback: async ({ options }) => run(() => self.api.matchupPost('/score', { index: options.runner, delta: options.delta }))(),
+		},
+		matchup_clock: {
+			name: 'Versus: clock / race control',
+			options: [
+				{
+					id: 'action',
+					type: 'dropdown',
+					label: 'Action',
+					choices: [
+						{ id: '/clock/start', label: 'Start clock' },
+						{ id: '/clock/pause', label: 'Pause clock' },
+						{ id: '/clock/reset', label: 'Reset clock' },
+						{ id: '/clock/race/start-all', label: 'Race: start all runners' },
+						{ id: '/clock/race/pause-all', label: 'Race: pause all runners' },
+						{ id: '/clock/race/reset-all', label: 'Race: reset all runners' },
+						{ id: 'none', label: 'Clock: set to None (hidden)' },
+					],
+					default: '/clock/start',
+				},
+			],
+			callback: async ({ options }) =>
+				run(() =>
+					options.action === 'none'
+						? self.api.matchupPost('/clock/set', { enabled: false })
+						: self.api.matchupPost(options.action),
+				)(),
+		},
+		matchup_runner: {
+			name: 'Versus: runner finish / toggle / reset',
+			options: [
+				{ id: 'runner', type: 'dropdown', label: 'Runner', choices: [{ id: 0, label: 'Runner 1' }, { id: 1, label: 'Runner 2' }], default: 0 },
+				{
+					id: 'action',
+					type: 'dropdown',
+					label: 'Action',
+					choices: [
+						{ id: 'finish', label: 'Finish' },
+						{ id: 'toggle', label: 'Start / pause' },
+						{ id: 'reset', label: 'Reset' },
+					],
+					default: 'finish',
+				},
+			],
+			callback: async ({ options }) =>
+				run(() => self.api.matchupPost(`/clock/race/${options.action}`, { competitor: options.runner }))(),
+		},
+		matchup_general: {
+			name: 'Versus: swap sides / reset scores / save progress',
+			options: [
+				{
+					id: 'action',
+					type: 'dropdown',
+					label: 'Action',
+					choices: [
+						{ id: '/swap', label: 'Swap sides' },
+						{ id: '/reset-scores', label: 'Reset scores' },
+						{ id: '/history/snapshot', label: 'Save progress to history' },
+						{ id: '/queue/next', label: 'Next in queue' },
+						{ id: '/queue/prev', label: 'Previous in queue' },
+					],
+					default: '/history/snapshot',
+				},
+			],
+			callback: async ({ options }) => run(() => self.api.matchupPost(options.action))(),
+		},
 		randomizer_restore: {
 			name: 'Randomizer: restore removed choices',
 			description: 'Put every eliminated or taken-out choice back in the pool',

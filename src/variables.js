@@ -57,6 +57,18 @@ const STATIC_VARS = {
 	latest_donation: 'Latest donation (user)',
 	latest_raid: 'Latest raider',
 	timers_running: 'Timers currently running',
+	matchup_title: 'Versus: match title',
+	matchup_phase: 'Versus: match phase',
+	matchup_status: 'Versus: match status',
+	matchup_winner: 'Versus: winner',
+	matchup_c1_name: 'Versus: competitor 1 name',
+	matchup_c1_score: 'Versus: competitor 1 score',
+	matchup_c1_time: 'Versus: competitor 1 race time',
+	matchup_c2_name: 'Versus: competitor 2 name',
+	matchup_c2_score: 'Versus: competitor 2 score',
+	matchup_c2_time: 'Versus: competitor 2 race time',
+	matchup_clock: 'Versus: match clock',
+	matchup_clock_state: 'Versus: clock state (running / paused / off)',
 	goals_total: 'Goals configured',
 	goals_completed: 'Goals completed',
 	session_started: 'Session start time',
@@ -310,6 +322,28 @@ function updateVariables(self) {
 	values.randomizer_remaining = rz ? Math.max(0, (rz.choices || []).length - rzRemoved) : ''
 	values.randomizer_removed = rz ? rzRemoved : ''
 	values.randomizer_elimination = rz && rz.eliminationMode ? 'on' : 'off'
+	const mu = self.state.matchup
+	const mc = (mu && mu.competitors) || []
+	const fmtT = (sec) => {
+		const t = Math.max(0, Number(sec) || 0)
+		const h = Math.floor(t / 3600)
+		const m = Math.floor((t % 3600) / 60)
+		const s = (t % 60).toFixed(2).padStart(5, '0')
+		return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${String(m).padStart(2, '0')}:${s}`
+	}
+	values.matchup_title = (mu && mu.title) || ''
+	values.matchup_phase = (mu && mu.phase) || ''
+	values.matchup_status = (mu && mu.status) || ''
+	values.matchup_winner = (mu && mu.winner) || ''
+	for (let i = 0; i < 2; i++) {
+		const c = mc[i]
+		values[`matchup_c${i + 1}_name`] = c ? c.name || '' : ''
+		values[`matchup_c${i + 1}_score`] = c ? c.score || 0 : 0
+		values[`matchup_c${i + 1}_time`] = c && c.timer ? c.timer.finishTime || fmtT(c.timer.elapsed) : ''
+	}
+	const clk = mu && mu.clock
+	values.matchup_clock = !clk || !clk.enabled ? '' : fmtT(clk.mode === 'countdown' ? clk.remaining : clk.elapsed)
+	values.matchup_clock_state = !clk || !clk.enabled ? 'off' : clk.isRunning ? 'running' : 'paused'
 
 	// Timers and goals can be added or removed at runtime
 	const keys = Object.keys(values).sort().join(',')
