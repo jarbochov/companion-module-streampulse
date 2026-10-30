@@ -1063,6 +1063,129 @@ module.exports = function (self) {
 					return self.api.pollEnd()
 				})(),
 		},
+		poll_tournament_save_template: {
+			name: 'Poll Tournament: save active bracket as template',
+			description: 'Save entrants and settings for a fresh bracket later. Does not interrupt a running vote.',
+			options: [
+				{
+					id: 'name',
+					type: 'textinput',
+					label: 'Template name (optional)',
+					default: '',
+					useVariables: true,
+				},
+			],
+			callback: async ({ options }) =>
+				run(async () =>
+					self.api.tournamentPost(
+						'/presets',
+						{ name: (await self.parseVariablesInString(options.name || '')).trim(), fromActive: true },
+						true,
+					),
+				)(),
+		},
+		poll_tournament_save_checkpoint: {
+			name: 'Poll Tournament: save progress checkpoint',
+			description: 'Save bracket progress without interrupting a running vote. Individual voters are not saved.',
+			options: [
+				{
+					id: 'name',
+					type: 'textinput',
+					label: 'Checkpoint name (optional)',
+					default: '',
+					useVariables: true,
+				},
+			],
+			callback: async ({ options }) =>
+				run(async () =>
+					self.api.tournamentPost(
+						'/checkpoints',
+						{ name: (await self.parseVariablesInString(options.name || '')).trim() },
+						true,
+					),
+				)(),
+		},
+		poll_tournament_restore: {
+			name: 'Poll Tournament: load saved bracket / checkpoint',
+			description:
+				'Replaces the current bracket. Requires confirmation; blocked while any vote runs. Unfinished matches need a new vote.',
+			options: [
+				{
+					id: 'id',
+					type: 'textinput',
+					label: 'Saved bracket / checkpoint ID (from /api/polls/tournament/history)',
+					default: '',
+					useVariables: true,
+				},
+				{
+					id: 'confirm',
+					type: 'checkbox',
+					label: 'I confirm this button may replace the current poll bracket',
+					default: false,
+				},
+			],
+			callback: async ({ options }) =>
+				run(async () => {
+					if (options.confirm !== true) throw new Error('Confirm replacing the current poll bracket before loading.')
+					const id = (await self.parseVariablesInString(options.id || '')).trim()
+					if (!id) throw new Error('A saved bracket / checkpoint ID is required.')
+					return self.api.tournamentPost('/history/restore', { id }, true)
+				})(),
+		},
+		poll_tournament_create_from_template: {
+			name: 'Poll Tournament: create fresh bracket from template',
+			description:
+				'Replaces the current bracket with fresh entrants and settings. Requires confirmation; blocked while a linked vote runs.',
+			options: [
+				{
+					id: 'id',
+					type: 'textinput',
+					label: 'Template ID (from /api/polls/tournament/presets)',
+					default: '',
+					useVariables: true,
+				},
+				{
+					id: 'confirm',
+					type: 'checkbox',
+					label: 'I confirm this button may replace the current poll bracket',
+					default: false,
+				},
+			],
+			callback: async ({ options }) =>
+				run(async () => {
+					if (options.confirm !== true) throw new Error('Confirm replacing the current poll bracket before creating.')
+					const id = (await self.parseVariablesInString(options.id || '')).trim()
+					if (!id) throw new Error('A poll tournament template ID is required.')
+					const result = await self.api.tournamentPresets(true)
+					const preset = ((result && result.presets) || []).find((p) => p.id === id)
+					if (!preset) throw new Error(`Poll tournament template not found: ${id}`)
+					const body = {}
+					for (const key of [
+						'title',
+						'entrants',
+						'format',
+						'logo',
+						'logoSize',
+						'matchDuration',
+						'blind',
+						'subMultiplier',
+						'announceChat',
+						'roundRobinLegs',
+						'pointsSystem',
+						'pointsPerWin',
+						'pointsPerDraw',
+						'pointsPerLoss',
+						'allowDraws',
+					]) {
+						if (preset[key] !== undefined) body[key] = preset[key]
+					}
+					return self.api.tournamentPost(
+						'/create',
+						{ ...body, progressionMode: 'vote', scoringType: 'points', bestOf: 0, isPoll: true },
+						true,
+					)
+				})(),
+		},
 		tournament_score: {
 			name: 'Tournament: change match game or round score',
 			description: 'Score an entrant in the active (or selected) tournament bracket match',
