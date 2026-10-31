@@ -10,6 +10,7 @@ const goalChoices = (self) => {
 const GREEN = 0x00aa00
 const RED = 0xcc0000
 const AMBER = 0xcc8800
+const BLUE = 0x1a73e8
 const WHITE = 0xffffff
 
 const {
@@ -387,6 +388,69 @@ module.exports = async function (self) {
 			defaultStyle: { bgcolor: AMBER, color: WHITE },
 			options: [],
 			callback: () => !!self.state.randomizerSpinning,
+		},
+		tournament_focus_active: {
+			name: 'Tournament: live camera focus mode active',
+			type: 'boolean',
+			description: 'True when the overlay camera focus mode is enabled',
+			defaultStyle: { bgcolor: BLUE, color: WHITE },
+			options: [
+				{
+					id: 'target',
+					type: 'dropdown',
+					label: 'Target Overlay',
+					choices: [
+						{ id: 'either', label: 'Either (Versus or Poll)' },
+						{ id: 'versus', label: 'Versus Tournament' },
+						{ id: 'poll', label: 'Audience Poll Tournament' },
+					],
+					default: 'either',
+				},
+			],
+			callback: ({ options }) => {
+				const vt = self.state.tournament
+				const pt = self.state.pollTournament
+				const vFocus = Boolean(vt?.viewSettings?.focus)
+				const pFocus = Boolean(pt?.viewSettings?.focus)
+				if (options.target === 'versus') return vFocus
+				if (options.target === 'poll') return pFocus
+				return vFocus || pFocus
+			},
+		},
+		tournament_bracket_section: {
+			name: 'Tournament: bracket section active',
+			type: 'boolean',
+			description: 'True when the overlay is displaying the specified bracket section',
+			defaultStyle: { bgcolor: BLUE, color: WHITE },
+			options: [
+				{
+					id: 'target',
+					type: 'dropdown',
+					label: 'Target Overlay',
+					choices: [
+						{ id: 'versus', label: 'Versus Tournament' },
+						{ id: 'poll', label: 'Audience Poll Tournament' },
+					],
+					default: 'versus',
+				},
+				{
+					id: 'section',
+					type: 'dropdown',
+					label: 'Section',
+					choices: [
+						{ id: 'all', label: 'All Sections' },
+						{ id: 'winners', label: 'Winners Bracket' },
+						{ id: 'losers', label: 'Losers Bracket' },
+						{ id: 'finals', label: 'Grand Finals' },
+					],
+					default: 'winners',
+				},
+			],
+			callback: ({ options }) => {
+				const t = options.target === 'poll' ? self.state.pollTournament : self.state.tournament
+				const curSection = (t?.viewSettings?.bracket || 'all').toLowerCase()
+				return curSection === options.section
+			},
 		},
 	})
 }

@@ -16,7 +16,7 @@ const randomizerPresetChoices = (self) => {
 }
 const randomizerButtonPresetChoices = (self) => [
 	{ id: '', label: '(Studio / Overlay phrase preset)' },
-	...((self.state.randomizerButtonPresets || []).map((p) => ({ id: p.id, label: p.name || p.id }))),
+	...(self.state.randomizerButtonPresets || []).map((p) => ({ id: p.id, label: p.name || p.id })),
 	{ id: 'static', label: 'Fixed Single Title' },
 ]
 const chatCommandChoices = (self) => {
@@ -782,7 +782,10 @@ module.exports = function (self) {
 					}
 					const phrases = await self.parseVariablesInString(options.buttonPhrases || '')
 					if (phrases.trim()) {
-						body.buttonPhrases = phrases.split(/\r?\n/).map((phrase) => phrase.trim()).filter(Boolean)
+						body.buttonPhrases = phrases
+							.split(/\r?\n/)
+							.map((phrase) => phrase.trim())
+							.filter(Boolean)
 						body.buttonPreset = 'custom'
 					}
 					const winnerHeader = await self.parseVariablesInString(options.winnerHeader || '')
@@ -1365,6 +1368,107 @@ module.exports = function (self) {
 					}
 				})(),
 		},
+		tournament_view: {
+			name: 'Tournament: bracket camera focus, round pan & section view',
+			description: 'Control live camera framing, pan across rounds, or switch bracket sections on active OBS overlays',
+			options: [
+				{
+					id: 'target',
+					type: 'dropdown',
+					label: 'Target Overlay',
+					choices: [
+						{ id: 'versus', label: 'Versus Bracket (/overlays/tournament.html)' },
+						{ id: 'poll', label: 'Audience Poll Bracket (/overlays/poll-tournament.html)' },
+					],
+					default: 'versus',
+				},
+				{
+					id: 'focus',
+					type: 'dropdown',
+					label: 'Camera Focus / Zoom Mode',
+					choices: [
+						{ id: 'no_change', label: 'No Change' },
+						{ id: 'toggle', label: 'Toggle Focus Mode (Zoom In / Full Overview)' },
+						{ id: '1', label: 'Enable Camera Focus (Zoomed In on Match)' },
+						{ id: '0', label: 'Disable Camera Focus (Full Bracket Overview)' },
+					],
+					default: 'toggle',
+				},
+				{
+					id: 'round',
+					type: 'dropdown',
+					label: 'Round Camera Pan',
+					choices: [
+						{ id: 'no_change', label: 'No Change' },
+						{ id: 'next', label: 'Next Round' },
+						{ id: 'prev', label: 'Previous Round' },
+						{ id: 'reset', label: 'Reset (Follow Active Match)' },
+						{ id: 'custom', label: 'Specific Round (Enter Number or Name Below)' },
+					],
+					default: 'no_change',
+				},
+				{
+					id: 'roundValue',
+					type: 'textinput',
+					label: 'Custom Round Number or Name (e.g. 2, Semifinals)',
+					default: '',
+					isVisibleExpression: `$(options:round) == 'custom'`,
+				},
+				{
+					id: 'bracket',
+					type: 'dropdown',
+					label: 'Bracket Section (Double Elimination)',
+					choices: [
+						{ id: 'no_change', label: 'No Change' },
+						{ id: 'cycle', label: 'Cycle Next Section' },
+						{ id: 'all', label: 'All Sections' },
+						{ id: 'winners', label: 'Winners Bracket' },
+						{ id: 'losers', label: 'Losers Bracket' },
+						{ id: 'finals', label: 'Grand Finals' },
+					],
+					default: 'no_change',
+				},
+				{
+					id: 'glide',
+					type: 'dropdown',
+					label: 'Transitions',
+					choices: [
+						{ id: 'no_change', label: 'No Change' },
+						{ id: '1', label: 'Smooth Glide (0.85s)' },
+						{ id: '0', label: 'Instant Snap (No Transition)' },
+					],
+					default: 'no_change',
+				},
+				{
+					id: 'matchId',
+					type: 'dropdown',
+					label: 'Target Specific Match (optional)',
+					choices: tournamentMatchChoices(self),
+					default: '',
+				},
+			],
+			callback: async ({ options }) =>
+				run(() => {
+					const isPoll = options.target === 'poll'
+					const body = {}
+					if (options.focus && options.focus !== 'no_change') {
+						body.focus = options.focus
+					}
+					if (options.round && options.round !== 'no_change') {
+						body.round = options.round === 'custom' ? options.roundValue : options.round
+					}
+					if (options.bracket && options.bracket !== 'no_change') {
+						body.bracket = options.bracket
+					}
+					if (options.glide && options.glide !== 'no_change') {
+						body.glide = options.glide
+					}
+					if (options.matchId) {
+						body.matchId = options.matchId
+					}
+					return self.api.tournamentPost('/view', body, isPoll)
+				})(),
+		},
 		randomizer_restore: {
 			name: 'Randomizer: restore removed choices',
 			description: 'Put every eliminated or taken-out choice back in the pool',
@@ -1379,7 +1483,10 @@ module.exports = function (self) {
 				},
 			],
 			callback: async ({ options }) => {
-				const presetId = options.preset || (self.state.randomizerLast && self.state.randomizerLast.preset) || (self.state.randomizerPresets && self.state.randomizerPresets[0] && self.state.randomizerPresets[0].id)
+				const presetId =
+					options.preset ||
+					(self.state.randomizerLast && self.state.randomizerLast.preset) ||
+					(self.state.randomizerPresets && self.state.randomizerPresets[0] && self.state.randomizerPresets[0].id)
 				if (!presetId) return
 				await run(() => self.api.randomizerRestore(presetId))()
 			},

@@ -94,6 +94,10 @@ const STATIC_VARS = {
 	tournament_e2_rounds: 'Tournament: active match entrant 2 round wins',
 	tournament_pending_winner: 'Tournament: entrant who met win target (ready to advance)',
 	tournament_champion: 'Tournament: crowned champion',
+	tournament_focus: 'Tournament: live camera focus mode active (1 or 0)',
+	tournament_bracket: 'Tournament: live bracket section (all / winners / losers / finals)',
+	poll_tournament_focus: 'Poll Tournament: live camera focus mode active (1 or 0)',
+	poll_tournament_bracket: 'Poll Tournament: live bracket section (all / winners / losers / finals)',
 	goals_total: 'Goals configured',
 	goals_completed: 'Goals completed',
 	session_started: 'Session start time',
@@ -384,7 +388,7 @@ function updateVariables(self) {
 	const pollIsActive = !!(pollObj && (pollObj.status === 'ACTIVE' || pollObj.status === 'active' || pollObj.active))
 	values.poll_active = yn(pollIsActive)
 	values.poll_title = (pollObj && (pollObj.title || pollObj.question)) || ''
-	const pollChoices = (pollObj && Array.isArray(pollObj.choices) ? pollObj.choices : [])
+	const pollChoices = pollObj && Array.isArray(pollObj.choices) ? pollObj.choices : []
 	const totalVotes =
 		pollObj && Number.isFinite(pollObj.totalVotes)
 			? pollObj.totalVotes
@@ -405,7 +409,7 @@ function updateVariables(self) {
 	values.tournament_status = (tr && tr.status) || ''
 	values.tournament_format = (tr && tr.format) || ''
 	values.tournament_champion = (tr && tr.champion) || ''
-	const trMatches = (tr && Array.isArray(tr.matches) ? tr.matches : [])
+	const trMatches = tr && Array.isArray(tr.matches) ? tr.matches : []
 	const eName = (e) => (e && typeof e === 'object' ? e.name || '' : String(e || ''))
 	const eScore = (m, idx) => {
 		const e = idx === 0 ? m && m.entrant1 : m && m.entrant2
@@ -431,7 +435,8 @@ function updateVariables(self) {
 				eName(m.entrant2) !== 'TBD',
 		) ||
 		null
-	values.tournament_round = (activeMatch && (activeMatch.roundName || activeMatch.roundLabel || activeMatch.label)) || ''
+	values.tournament_round =
+		(activeMatch && (activeMatch.roundName || activeMatch.roundLabel || activeMatch.label)) || ''
 	values.tournament_e1_name = activeMatch ? eName(activeMatch.entrant1) : ''
 	values.tournament_e1_score = activeMatch ? eScore(activeMatch, 0) : 0
 	values.tournament_e1_rounds = activeMatch ? eRounds(activeMatch, 0) : 0
@@ -447,6 +452,13 @@ function updateVariables(self) {
 		}
 	}
 	values.tournament_pending_winner = pendingWinner
+
+	const vt = self.state.tournament
+	const pt = self.state.pollTournament
+	values.tournament_focus = vt?.viewSettings?.focus ? 1 : 0
+	values.tournament_bracket = vt?.viewSettings?.bracket || 'all'
+	values.poll_tournament_focus = pt?.viewSettings?.focus ? 1 : 0
+	values.poll_tournament_bracket = pt?.viewSettings?.bracket || 'all'
 
 	// Timers and goals can be added or removed at runtime
 	const keys = Object.keys(values).sort().join(',')

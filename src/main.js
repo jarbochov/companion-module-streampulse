@@ -183,11 +183,36 @@ class ModuleInstance extends InstanceBase {
 		} else if (msg.type === 'tournament-update') {
 			this.state.tournament = msg.data || msg.tournament || null
 			updateVariables(this)
-			this.checkFeedbacks('tournament_active', 'tournament_win_ready')
+			this.checkFeedbacks(
+				'tournament_active',
+				'tournament_win_ready',
+				'tournament_focus_active',
+				'tournament_bracket_section',
+			)
 		} else if (msg.type === 'poll-tournament-update') {
 			this.state.pollTournament = msg.data || msg.tournament || null
 			updateVariables(this)
-			this.checkFeedbacks('tournament_active', 'tournament_win_ready')
+			this.checkFeedbacks(
+				'tournament_active',
+				'tournament_win_ready',
+				'tournament_focus_active',
+				'tournament_bracket_section',
+			)
+		} else if (msg.type === 'tournament-view') {
+			if (this.state.tournament) {
+				this.state.tournament.viewSettings = { ...(this.state.tournament.viewSettings || {}), ...(msg.data || {}) }
+			}
+			updateVariables(this)
+			this.checkFeedbacks('tournament_focus_active', 'tournament_bracket_section')
+		} else if (msg.type === 'poll-tournament-view') {
+			if (this.state.pollTournament) {
+				this.state.pollTournament.viewSettings = {
+					...(this.state.pollTournament.viewSettings || {}),
+					...(msg.data || {}),
+				}
+			}
+			updateVariables(this)
+			this.checkFeedbacks('tournament_focus_active', 'tournament_bracket_section')
 		} else if (msg.type === 'randomizer-spin') {
 			const d = msg.data || msg.payload || msg
 			this.state.randomizerLast = d

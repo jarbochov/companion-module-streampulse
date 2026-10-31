@@ -58,7 +58,10 @@ test('Randomizer Companion action supports card deck mode and duration', async (
 		['', '4', '6', '8', '10'],
 	)
 	const autohide = action.options.find((option) => option.id === 'autohide')
-	assert.deepEqual(autohide.choices.map((choice) => choice.id), ['', '8', '15', '30', '0'])
+	assert.deepEqual(
+		autohide.choices.map((choice) => choice.id),
+		['', '8', '15', '30', '0'],
+	)
 	assert.equal(autohide.default, '')
 	assert.deepEqual(
 		action.options.find((option) => option.id === 'buttonPreset').choices.map((choice) => choice.id),
