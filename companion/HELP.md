@@ -12,6 +12,8 @@ Controls a running [StreamPulse](https://github.com/jarbochov/StreamPulse) serve
 
 **Polls & Tournaments:** actions to start polls from saved presets or custom question/choices (with blind voting and 2x sub multiplier), end/crown winner, extend (+seconds), or cancel active polls; tournament bracket actions to score entrant game wins or round pips, confirm & advance match winners, cycle or pin/unpin active matches, toggle live bracket highlight glow, reset/rollback matches, and launch Poll Tournament match votes; variables for `poll_active`, `poll_title`, `poll_total_votes`, `poll_remaining`, `poll_leader`, `poll_winner`, `tournament_title`, `tournament_round`, `tournament_e1_name`, `tournament_e1_score`, `tournament_e1_rounds`, `tournament_e2_name`, `tournament_e2_score`, `tournament_e2_rounds`, `tournament_pending_winner`, `tournament_champion`; feedbacks for `poll_active`, `tournament_active`, and `tournament_win_ready` (lights up when an entrant meets the match win target and is ready to advance).
 
+Per-runner finish, toggle, and reset use an explicit zero-based API index for the selected Runner 1–4. Existing buttons retain their runner selection; no reconfiguration is required.
+
 **Presets:** `Spin Randomizer (Wheel / Roller / Deck)` shows the last used mode and duration on the button; `Draw Randomizer Card` is a ready-to-use deck draw button. Both support Studio/overlay inheritance and explicit duration/auto-hide overrides.
 
 ### Poll Tournament templates and saved progress

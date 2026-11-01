@@ -925,7 +925,7 @@ module.exports = function (self) {
 				},
 			],
 			callback: async ({ options }) =>
-				run(() => self.api.matchupPost(`/clock/race/${options.action}`, { competitor: Number(options.runner) || 0 }))(),
+				run(() => self.api.matchupPost(`/clock/race/${options.action}`, { index: Number(options.runner) || 0 }))(),
 		},
 		matchup_general: {
 			name: 'Versus: swap sides / reset scores / queue / presets',
