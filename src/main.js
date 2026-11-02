@@ -402,6 +402,7 @@ class ModuleInstance extends InstanceBase {
 				'goal_complete',
 				'goal_enabled',
 				'alert_queue_paused',
+				'alerts_muted',
 				'music_playing',
 				'music_overlay_visible',
 				'overlay_shown',

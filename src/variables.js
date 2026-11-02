@@ -20,6 +20,7 @@ const STATIC_VARS = {
 	music_state: 'Music state',
 	alerts_pending: 'Alerts waiting in queue',
 	alerts_paused: 'Alert queue paused (yes / no)',
+	alerts_muted: 'Alert display muted (yes / no)',
 	ssn_connected: 'SocialStream connected (yes / no)',
 	twitch_connected: 'Twitch connected (yes / no)',
 	music_overlay: 'Music overlay (visible / hidden)',
@@ -318,6 +319,7 @@ function updateVariables(self) {
 	}
 	values.alerts_pending = alerts ? alerts.pending : 0
 	values.alerts_paused = yn(alerts && alerts.paused)
+	values.alerts_muted = yn(alerts && alerts.muted)
 	for (const t of Object.values(timers)) {
 		const s = slug(t.id)
 		values[`timer_${s}_remaining`] = t.formattedRemaining || ''

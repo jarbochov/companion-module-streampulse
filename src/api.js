@@ -120,6 +120,10 @@ class StreamPulseApi {
 	alertQueue(action) {
 		return this.request('/api/alerts/queue', { method: 'POST', body: { action } })
 	}
+	alertMute(muted) {
+		return this.request('/api/alerts/mute', { method: 'POST', body: { muted } })
+	}
+
 	alertTest(ruleId) {
 		return this.request('/api/alerts/test', { method: 'POST', body: { ruleId } })
 	}

@@ -272,6 +272,13 @@ module.exports = async function (self) {
 			options: [],
 			callback: () => !!(self.state.alerts && self.state.alerts.paused),
 		},
+		alerts_muted: {
+			name: 'Alerts: display muted',
+			type: 'boolean',
+			defaultStyle: { bgcolor: AMBER, color: WHITE },
+			options: [],
+			callback: () => !!(self.state.alerts && self.state.alerts.muted),
+		},
 		music_playing: {
 			name: 'Music: playing',
 			type: 'boolean',

@@ -195,6 +195,27 @@ module.exports = function (self) {
 			],
 			callback: async ({ options }) => run(() => self.api.alertQueue(options.action))(),
 		},
+		alert_mute: {
+			name: 'Alerts: mute display',
+			options: [
+				{
+					id: 'state',
+					type: 'dropdown',
+					label: 'State',
+					choices: [
+						{ id: 'toggle', label: 'Toggle' },
+						{ id: 'mute', label: 'Mute' },
+						{ id: 'unmute', label: 'Unmute' },
+					],
+					default: 'toggle',
+				},
+			],
+			callback: async ({ options }) => {
+				const cur = !!(self.state.alerts && self.state.alerts.muted)
+				const next = options.state === 'toggle' ? !cur : options.state === 'mute'
+				await run(() => self.api.alertMute(next))()
+			},
+		},
 		alert_test: {
 			name: 'Alerts: fire test for rule',
 			options: [
