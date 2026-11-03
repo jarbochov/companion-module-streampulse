@@ -227,6 +227,33 @@ class StreamPulseApi {
 	randomizerButtonPresets() {
 		return this.request('/api/randomizer/button-presets')
 	}
+	alertTestWebhook(url, method = 'POST') {
+		return this.request('/api/alerts/test-webhook', { method: 'POST', body: { url, method } })
+	}
+	tierList() {
+		return this.request('/api/tier-list')
+	}
+	tierListPresets() {
+		return this.request('/api/tier-list/presets')
+	}
+	tierListStartVote(params = {}) {
+		return this.request('/api/tier-list/vote/start', { method: 'POST', body: params })
+	}
+	tierListLockVote() {
+		return this.request('/api/tier-list/vote/lock', { method: 'POST' })
+	}
+	tierListEndVote(applyConsensus = true) {
+		return this.request('/api/tier-list/vote/end', { method: 'POST', body: { applyConsensus } })
+	}
+	tierListCancelVote() {
+		return this.request('/api/tier-list/vote/cancel', { method: 'POST' })
+	}
+	tierListReset() {
+		return this.request('/api/tier-list/reset', { method: 'POST' })
+	}
+	tierListLoadPreset(presetId) {
+		return this.request(`/api/tier-list/presets/${encodeURIComponent(presetId)}/load`, { method: 'POST' })
+	}
 }
 
 module.exports = { StreamPulseApi }

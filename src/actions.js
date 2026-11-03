@@ -64,6 +64,23 @@ const tournamentMatchChoices = (self) => {
 	}))
 	return [{ id: '', label: '(Active / First Ready Match)' }, ...list]
 }
+const tierItemChoices = (self) => {
+	const items = (self.state.tierList && self.state.tierList.items) || []
+	const unranked = items.filter((it) => !it.tierId)
+	const list = (unranked.length ? unranked : items).map((it) => ({
+		id: it.id,
+		label: `${it.name || it.id}${it.tierId ? ' (Ranked)' : ''}`,
+	}))
+	return [{ id: '', label: '(Next unranked item)' }, ...list]
+}
+const tierPresetChoices = (self) => {
+	const list = (self.state.tierListPresets || (self.state.tierList && self.state.tierList.presets) || []).map((p) => ({
+		id: p.id,
+		label: p.name || p.title || p.id,
+	}))
+	return list.length ? list : [{ id: '', label: '(no presets found)' }]
+}
+
 const resolveActiveTournamentMatch = (self, explicitMatchId, isPoll = false) => {
 	const t = isPoll ? self.state.pollTournament : self.state.tournament
 	if (!t || !Array.isArray(t.matches)) return null
@@ -103,82 +120,8 @@ module.exports = function (self) {
 	}
 
 	self.setActionDefinitions({
-		timer_control: {
-			name: 'Timer: control',
-			options: [
-				{
-					id: 'timer',
-					type: 'dropdown',
-					label: 'Timer',
-					choices: timerChoices(self),
-					default: timerChoices(self)[0].id,
-				},
-				{
-					id: 'action',
-					type: 'dropdown',
-					label: 'Action',
-					choices: [
-						{ id: 'start', label: 'Start' },
-						{ id: 'pause', label: 'Pause' },
-						{ id: 'resume', label: 'Resume' },
-						{ id: 'reset', label: 'Reset' },
-						{ id: 'add_time', label: 'Add time' },
-						{ id: 'subtract_time', label: 'Subtract time' },
-						{ id: 'visibility', label: 'Toggle overlay visibility' },
-					],
-					default: 'start',
-				},
-				{
-					id: 'minutes',
-					type: 'number',
-					label: 'Minutes (add / subtract)',
-					default: 1,
-					min: 0,
-					max: 1440,
-					isVisibleExpression: `$(options:action) == 'add_time' || $(options:action) == 'subtract_time'`,
-				},
-				{
-					id: 'seconds',
-					type: 'number',
-					label: 'Seconds (add / subtract)',
-					default: 0,
-					min: 0,
-					max: 3600,
-					isVisibleExpression: `$(options:action) == 'add_time' || $(options:action) == 'subtract_time'`,
-				},
-			],
-			callback: async ({ options }) =>
-				run(() => {
-					const params = {}
-					if (options.action === 'add_time' || options.action === 'subtract_time') {
-						params.minutes = options.minutes
-						params.seconds = options.seconds
-					}
-					if (options.action === 'visibility') params.mode = 'toggle'
-					return self.api.timerControl(options.timer, options.action, params)
-				})(),
-		},
-		goal_action: {
-			name: 'Goal: control',
-			options: [
-				{ id: 'goal', type: 'dropdown', label: 'Goal', choices: goalChoices(self), default: goalChoices(self)[0].id },
-				{
-					id: 'action',
-					type: 'dropdown',
-					label: 'Action',
-					choices: [
-						{ id: 'reset', label: 'Reset progress' },
-						{ id: 'toggle', label: 'Toggle enabled' },
-						{ id: 'enable', label: 'Enable' },
-						{ id: 'disable', label: 'Disable' },
-					],
-					default: 'reset',
-				},
-			],
-			callback: async ({ options }) => run(() => self.api.goalAction(options.goal, options.action))(),
-		},
 		alert_queue: {
-			name: 'Alerts: queue control',
+			name: 'Alerts: Queue control (skip, pause, resume, clear)',
 			options: [
 				{
 					id: 'action',
@@ -196,7 +139,7 @@ module.exports = function (self) {
 			callback: async ({ options }) => run(() => self.api.alertQueue(options.action))(),
 		},
 		alert_mute: {
-			name: 'Alerts: mute display',
+			name: 'Alerts: Mute / unmute display',
 			options: [
 				{
 					id: 'state',
@@ -216,46 +159,75 @@ module.exports = function (self) {
 				await run(() => self.api.alertMute(next))()
 			},
 		},
+		alert_replay_last: {
+			name: 'Alerts: Replay last alert',
+			options: [],
+			callback: async () => {
+				const history = (self.state.alerts && self.state.alerts.history) || []
+				const stamp = (a) => Date.parse(a.shownAt || a.at) || 0
+				const last = history.slice().sort((a, b) => stamp(b) - stamp(a))[0]
+				if (!last) return self.log('warn', 'No alert history to replay')
+				return run(() => self.api.replayAlert(last.id))()
+			},
+		},
 		alert_test: {
-			name: 'Alerts: fire test for rule',
+			name: 'Alerts: Fire test for rule',
 			options: [
 				{ id: 'rule', type: 'dropdown', label: 'Rule', choices: ruleChoices(self), default: ruleChoices(self)[0].id },
 			],
 			callback: async ({ options }) => run(() => self.api.alertTest(options.rule))(),
 		},
-		page_set_enabled: {
-			name: 'Overlay page: enable / disable',
+		alert_test_event: {
+			name: 'Alerts: Simulate stream event (follow, sub, bits, raid)',
+			description: 'Test overlays by firing a simulated Twitch or stream event',
 			options: [
-				{ id: 'page', type: 'dropdown', label: 'Page', choices: pageChoices(self), default: pageChoices(self)[0].id },
 				{
-					id: 'action',
+					id: 'trigger',
 					type: 'dropdown',
-					label: 'Action',
+					label: 'Event Type',
+					default: 'follow',
 					choices: [
-						{ id: 'enable', label: 'Enable' },
-						{ id: 'disable', label: 'Disable' },
-						{ id: 'toggle', label: 'Toggle' },
+						{ id: 'follow', label: 'Follow' },
+						{ id: 'sub', label: 'New Subscription' },
+						{ id: 'resub', label: 'Resub' },
+						{ id: 'gift', label: 'Gifted Sub' },
+						{ id: 'bits', label: 'Cheer / Bits' },
+						{ id: 'donation', label: 'Donation' },
+						{ id: 'raid', label: 'Raid' },
+						{ id: 'redeem', label: 'Channel Points Redeem' },
 					],
-					default: 'toggle',
+				},
+				{ id: 'user', type: 'textinput', label: 'Viewer name (optional)', default: 'TestViewer' },
+				{ id: 'amount', type: 'number', label: 'Amount (bits, months, viewers)', default: 100, min: 1, max: 100000 },
+			],
+			callback: async (e) =>
+				run(() => self.api.alertTestEvent(e.options.trigger, { user: e.options.user, amount: e.options.amount }))(),
+		},
+		alert_test_webhook: {
+			name: 'Alerts: Test webhook or Companion button press',
+			description: 'Test an HTTP webhook URL or Companion /press endpoint directly from Companion',
+			options: [
+				{
+					id: 'url',
+					type: 'textinput',
+					label: 'Webhook or Companion URL (e.g. http://127.0.0.1:8000/api/location/1/0/0/press/)',
+					default: 'http://127.0.0.1:8000/api/location/1/0/0/press/',
+				},
+				{
+					id: 'method',
+					type: 'dropdown',
+					label: 'HTTP Method',
+					choices: [
+						{ id: 'POST', label: 'POST (Default & required for Companion /press)' },
+						{ id: 'GET', label: 'GET' },
+					],
+					default: 'POST',
 				},
 			],
-			callback: async ({ options }) => {
-				const { overlay, page } = splitPage(options.page)
-				return run(() => self.api.pageAction(overlay, options.action, { page }))()
-			},
-		},
-		page_goto: {
-			name: 'Overlay page: show page',
-			options: [
-				{ id: 'page', type: 'dropdown', label: 'Page', choices: pageChoices(self), default: pageChoices(self)[0].id },
-			],
-			callback: async ({ options }) => {
-				const { overlay, page } = splitPage(options.page)
-				return run(() => self.api.pageAction(overlay, 'goto', { page }))()
-			},
+			callback: async ({ options }) => run(() => self.api.alertTestWebhook(options.url, options.method))(),
 		},
 		page_navigate: {
-			name: 'Overlay page: navigate',
+			name: 'Overlay: Navigate page (next, prev, first, last, auto)',
 			options: [
 				{
 					id: 'overlay',
@@ -280,37 +252,63 @@ module.exports = function (self) {
 			],
 			callback: async ({ options }) => run(() => self.api.pageAction(options.overlay, options.action))(),
 		},
-		slideshow_control: {
-			name: 'Slideshow: control',
+		page_goto: {
+			name: 'Overlay: Show page by name',
+			options: [
+				{ id: 'page', type: 'dropdown', label: 'Page', choices: pageChoices(self), default: pageChoices(self)[0].id },
+			],
+			callback: async ({ options }) => {
+				const { overlay, page } = splitPage(options.page)
+				return run(() => self.api.pageAction(overlay, 'goto', { page }))()
+			},
+		},
+		page_set_enabled: {
+			name: 'Overlay: Enable / disable page',
+			options: [
+				{ id: 'page', type: 'dropdown', label: 'Page', choices: pageChoices(self), default: pageChoices(self)[0].id },
+				{
+					id: 'action',
+					type: 'dropdown',
+					label: 'Action',
+					choices: [
+						{ id: 'enable', label: 'Enable' },
+						{ id: 'disable', label: 'Disable' },
+						{ id: 'toggle', label: 'Toggle' },
+					],
+					default: 'toggle',
+				},
+			],
+			callback: async ({ options }) => {
+				const { overlay, page } = splitPage(options.page)
+				return run(() => self.api.pageAction(overlay, options.action, { page }))()
+			},
+		},
+		overlay_visibility: {
+			name: 'Overlay: Show / hide entire overlay',
 			options: [
 				{
-					id: 'show',
+					id: 'overlay',
 					type: 'dropdown',
-					label: 'Slideshow',
-					choices: slideshowChoices(self),
-					default: slideshowChoices(self)[0].id,
+					label: 'Overlay',
+					choices: overlayChoices(self),
+					default: overlayChoices(self)[0].id,
 				},
 				{
 					id: 'action',
 					type: 'dropdown',
 					label: 'Action',
 					choices: [
-						{ id: 'next', label: 'Next slide' },
-						{ id: 'prev', label: 'Previous slide' },
-						{ id: 'pause', label: 'Pause' },
-						{ id: 'play', label: 'Play' },
-						{ id: 'toggle', label: 'Play / pause' },
+						{ id: 'toggle', label: 'Toggle' },
+						{ id: 'on', label: 'Show' },
+						{ id: 'off', label: 'Hide' },
 					],
-					default: 'next',
+					default: 'toggle',
 				},
 			],
-			callback: async ({ options }) => {
-				const { overlay, page } = splitPage(options.show)
-				return run(() => self.api.slideshowControl(overlay, page, options.action))()
-			},
+			callback: async ({ options }) => run(() => self.api.overlayVisibilityAction(options.overlay, options.action))(),
 		},
 		video_control: {
-			name: 'Overlay: video playback',
+			name: 'Overlay: Video playback (play, pause, toggle, restart, mute)',
 			options: [
 				{
 					id: 'video',
@@ -342,7 +340,7 @@ module.exports = function (self) {
 			},
 		},
 		cutout_control: {
-			name: 'Overlay: cutout (alpha punchthrough)',
+			name: 'Overlay: Cutout punchthrough (toggle, punch, fill)',
 			options: [
 				{
 					id: 'cutout',
@@ -368,32 +366,37 @@ module.exports = function (self) {
 				return run(() => self.api.cutoutControl(overlay, page, options.action))()
 			},
 		},
-		overlay_visibility: {
-			name: 'Overlay: show / hide entire overlay',
+		slideshow_control: {
+			name: 'Overlay: Slideshow control (play, pause, next, prev)',
 			options: [
 				{
-					id: 'overlay',
+					id: 'show',
 					type: 'dropdown',
-					label: 'Overlay',
-					choices: overlayChoices(self),
-					default: overlayChoices(self)[0].id,
+					label: 'Slideshow',
+					choices: slideshowChoices(self),
+					default: slideshowChoices(self)[0].id,
 				},
 				{
 					id: 'action',
 					type: 'dropdown',
 					label: 'Action',
 					choices: [
-						{ id: 'toggle', label: 'Toggle' },
-						{ id: 'on', label: 'Show' },
-						{ id: 'off', label: 'Hide' },
+						{ id: 'next', label: 'Next slide' },
+						{ id: 'prev', label: 'Previous slide' },
+						{ id: 'pause', label: 'Pause' },
+						{ id: 'play', label: 'Play' },
+						{ id: 'toggle', label: 'Play / pause' },
 					],
-					default: 'toggle',
+					default: 'next',
 				},
 			],
-			callback: async ({ options }) => run(() => self.api.overlayVisibilityAction(options.overlay, options.action))(),
+			callback: async ({ options }) => {
+				const { overlay, page } = splitPage(options.show)
+				return run(() => self.api.slideshowControl(overlay, page, options.action))()
+			},
 		},
 		music_overlay: {
-			name: 'Music overlay: show / hide',
+			name: 'Overlay: Music overlay (show / hide / toggle)',
 			options: [
 				{
 					id: 'action',
@@ -409,243 +412,783 @@ module.exports = function (self) {
 			],
 			callback: async ({ options }) => run(() => self.api.musicOverlayAction(options.action))(),
 		},
-		pin_last_highlight: {
-			name: 'Highlights: pin the last chat message',
-			options: [],
-			callback: async () => run(() => self.api.pinLastHighlight())(),
+		tier_vote_start: {
+			name: 'Tier Maker: Start voting on item',
+			description: 'Start live chat voting on an item (auto-selects next unranked item if omitted)',
+			options: [
+				{
+					id: 'item',
+					type: 'dropdown',
+					label: 'Item to rank',
+					choices: tierItemChoices(self),
+					default: '',
+				},
+				{
+					id: 'duration',
+					type: 'number',
+					label: 'Duration in seconds (0 = open until stopped)',
+					default: 60,
+					min: 0,
+					max: 3600,
+				},
+				{
+					id: 'mode',
+					type: 'dropdown',
+					label: 'Consensus calculation mode',
+					choices: [
+						{ id: '', label: '(Inherit Tier List default)' },
+						{ id: 'weighted_mean', label: 'Weighted Mean (Recommended)' },
+						{ id: 'plurality', label: 'Simple Plurality (Most votes)' },
+						{ id: 'supermajority', label: 'Supermajority (60%+)' },
+					],
+					default: '',
+				},
+			],
+			callback: async ({ options }) =>
+				run(() => {
+					const params = {}
+					if (options.item) params.itemId = options.item
+					if (options.duration !== undefined) params.duration = Number(options.duration)
+					if (options.mode) params.mode = options.mode
+					return self.api.tierListStartVote(params)
+				})(),
 		},
-		mark_clip: {
-			name: 'Clips: mark this moment as a clip candidate',
+		tier_vote_lock: {
+			name: 'Tier Maker: Lock voting (freeze votes without placing)',
+			description: 'Close voting and freeze chat votes while keeping consensus displayed for discussion',
 			options: [],
-			callback: async () => run(() => self.api.markClip('companion-button'))(),
+			callback: async () => run(() => self.api.tierListLockVote())(),
 		},
-		alert_replay_last: {
-			name: 'Alerts: replay the last alert',
+		tier_vote_end: {
+			name: 'Tier Maker: End vote & place into consensus tier',
+			description: 'Conclude vote and place the item into its audience consensus tier or discard',
+			options: [
+				{
+					id: 'apply',
+					type: 'dropdown',
+					label: 'Action',
+					choices: [
+						{ id: 'true', label: 'Lock & Place into consensus tier' },
+						{ id: 'false', label: 'End voting without placing' },
+					],
+					default: 'true',
+				},
+			],
+			callback: async ({ options }) => run(() => self.api.tierListEndVote(options.apply !== 'false'))(),
+		},
+		tier_vote_cancel: {
+			name: 'Tier Maker: Cancel active vote',
+			description: 'Cancel the active item vote immediately without placing it',
 			options: [],
-			callback: async () => {
-				const history = (self.state.alerts && self.state.alerts.history) || []
-				const stamp = (a) => Date.parse(a.shownAt || a.at) || 0
-				const last = history.slice().sort((a, b) => stamp(b) - stamp(a))[0]
-				if (!last) return self.log('warn', 'No alert history to replay')
-				return run(() => self.api.replayAlert(last.id))()
+			callback: async () => run(() => self.api.tierListCancelVote())(),
+		},
+		tier_reset_placements: {
+			name: 'Tier Maker: Reset item placements',
+			description: 'Move all placed items back to the unranked queue',
+			options: [
+				{
+					id: 'confirm',
+					type: 'checkbox',
+					label: 'I confirm resetting all placed items back to unranked',
+					default: false,
+				},
+			],
+			callback: async ({ options }) => {
+				if (!options.confirm) {
+					self.log('warn', 'Tier Maker reset cancelled: confirmation box was not checked')
+					return
+				}
+				return run(() => self.api.tierListReset())()
 			},
 		},
-		variable_counter: {
-			name: 'Variable: change a counter',
-			description: 'Increment, decrement or reset a StreamPulse counter (created in the Chat Bot page)',
+		tier_load_preset: {
+			name: 'Tier Maker: Load template preset',
+			description: 'Load a saved tier list template preset',
 			options: [
-				{ id: 'name', type: 'textinput', label: 'Counter name', default: '' },
+				{
+					id: 'preset',
+					type: 'dropdown',
+					label: 'Preset',
+					choices: tierPresetChoices(self),
+					default: (tierPresetChoices(self)[0] || {}).id,
+				},
+				{
+					id: 'confirm',
+					type: 'checkbox',
+					label: 'I confirm loading this preset replaces current tiers and items',
+					default: false,
+				},
+			],
+			callback: async ({ options }) => {
+				if (!options.confirm) {
+					self.log('warn', 'Tier Maker load preset cancelled: confirmation box was not checked')
+					return
+				}
+				if (!options.preset) return
+				return run(() => self.api.tierListLoadPreset(options.preset))()
+			},
+		},
+		poll_start: {
+			name: 'Polls: Start poll (preset or custom)',
+			description: 'Launch an audience poll from a saved preset or custom question & choices',
+			options: [
+				{
+					id: 'preset',
+					type: 'dropdown',
+					label: 'Poll Preset',
+					choices: pollPresetChoices(self),
+					default: '',
+				},
+				{
+					id: 'title',
+					type: 'textinput',
+					label: 'Custom Question / Title (used if no preset selected, or to override)',
+					default: '',
+					useVariables: true,
+				},
+				{
+					id: 'choices',
+					type: 'textinput',
+					label: 'Choices (comma-separated, e.g. Yes, No, Maybe)',
+					default: 'Option 1, Option 2',
+					useVariables: true,
+					isVisibleExpression: `$(options:preset) == ''`,
+				},
+				{
+					id: 'duration',
+					type: 'number',
+					label: 'Duration (seconds)',
+					default: 60,
+					min: 15,
+					max: 1800,
+				},
+				{
+					id: 'blind',
+					type: 'checkbox',
+					label: 'Blind Voting (hide percentages until poll ends)',
+					default: false,
+				},
+				{
+					id: 'subMultiplier',
+					type: 'checkbox',
+					label: '2x Subscriber Vote Weight',
+					default: false,
+				},
+			],
+			callback: async ({ options }) =>
+				run(async () => {
+					const preset = (self.state.pollPresets || []).find((p) => p.id === options.preset)
+					const customTitle = (await self.parseVariablesInString(options.title || '')).trim()
+					if (preset) {
+						return self.api.pollCreate({
+							title: customTitle || preset.title || preset.name || 'Poll',
+							choices: preset.choices || [],
+							duration: Number(options.duration) || Number(preset.duration) || 60,
+							blind: options.blind !== undefined ? !!options.blind : !!preset.blind,
+							subMultiplier: options.subMultiplier ? 2 : Number(preset.subMultiplier) || 1,
+						})
+					}
+					const rawChoices = await self.parseVariablesInString(options.choices || '')
+					const choices = rawChoices
+						.split(',')
+						.map((c) => c.trim())
+						.filter(Boolean)
+						.map((label) => ({ label }))
+					return self.api.pollCreate({
+						title: customTitle || 'Chat Poll',
+						choices: choices.length >= 2 ? choices : [{ label: 'Option 1' }, { label: 'Option 2' }],
+						duration: Number(options.duration) || 60,
+						blind: !!options.blind,
+						subMultiplier: options.subMultiplier ? 2 : 1,
+					})
+				})(),
+		},
+		poll_control: {
+			name: 'Polls: End / extend / cancel active poll',
+			options: [
 				{
 					id: 'action',
 					type: 'dropdown',
 					label: 'Action',
-					default: 'increment',
 					choices: [
-						{ id: 'increment', label: 'Increment' },
-						{ id: 'decrement', label: 'Decrement' },
-						{ id: 'reset', label: 'Reset' },
+						{ id: 'end', label: 'End Poll & Crown Winner' },
+						{ id: 'extend', label: 'Extend Poll Timer (+seconds)' },
+						{ id: 'cancel', label: 'Cancel / Dismiss Poll' },
 					],
+					default: 'end',
 				},
-				{ id: 'amount', type: 'number', label: 'Amount', default: 1, min: 1, max: 100000 },
-			],
-			callback: async (e) => {
-				try {
-					await self.api.variable(e.options.name, e.options.action, { amount: e.options.amount })
-				} catch (err) {
-					self.log('error', err.message)
-				}
-			},
-		},
-		variable_set: {
-			name: 'Variable: set a value',
-			description: 'Set a StreamPulse variable or counter to a value (created if missing)',
-			options: [
-				{ id: 'name', type: 'textinput', label: 'Variable name', default: '' },
-				{ id: 'value', type: 'textinput', label: 'Value', default: '', useVariables: true },
-			],
-			callback: async (e) => {
-				try {
-					await self.api.variable(e.options.name, 'set', { value: await self.parseVariablesInString(e.options.value) })
-				} catch (err) {
-					self.log('error', err.message)
-				}
-			},
-		},
-		chat_bot_toggle: {
-			name: 'Chat bot: turn on, off or toggle',
-			description: 'Lasts until StreamPulse restarts; the Config setting decides the start-up state',
-			options: [
 				{
-					id: 'mode',
-					type: 'dropdown',
-					label: 'Mode',
-					default: 'toggle',
-					choices: [
-						{ id: 'toggle', label: 'Toggle' },
-						{ id: 'on', label: 'On' },
-						{ id: 'off', label: 'Off' },
-					],
+					id: 'seconds',
+					type: 'number',
+					label: 'Seconds to Add',
+					default: 30,
+					min: 5,
+					max: 600,
+					isVisibleExpression: `$(options:action) == 'extend'`,
 				},
 			],
-			callback: async (e) => {
-				try {
-					await self.api.chatEnabled(
-						e.options.mode === 'toggle' ? { action: 'toggle' } : { enabled: e.options.mode === 'on' },
-					)
-					self.poll()
-				} catch (err) {
-					self.log('error', err.message)
-				}
-			},
+			callback: async ({ options }) =>
+				run(() => {
+					if (options.action === 'extend') return self.api.pollExtend(Number(options.seconds) || 30)
+					if (options.action === 'cancel') return self.api.pollCancel()
+					return self.api.pollEnd()
+				})(),
 		},
-		chat_send: {
-			name: 'Chat bot: send a chat message',
-			options: [{ id: 'text', type: 'textinput', label: 'Message', default: '', useVariables: true }],
-			callback: async (e) => {
-				try {
-					await self.api.chatSend(await self.parseVariablesInString(e.options.text))
-				} catch (err) {
-					self.log('error', err.message)
-				}
-			},
-		},
-		chat_run_command: {
-			name: 'Chat bot: run a command or trigger',
+		poll_tournament_create_from_template: {
+			name: 'Poll Tournament: Create fresh bracket from template',
 			description:
-				'Executes a command or trigger (silent commands run background API/webhook actions without sending chat messages)',
-			options: [
-				{
-					id: 'command',
-					type: 'dropdown',
-					label: 'Command or trigger',
-					choices: chatCommandChoices(self),
-					default: chatCommandChoices(self)[0].id,
-				},
-				{
-					id: 'custom_command',
-					type: 'textinput',
-					label: 'Or custom command name (overrides dropdown if set)',
-					default: '',
-					useVariables: true,
-				},
-				{
-					id: 'arg',
-					type: 'textinput',
-					label: 'Argument / parameter (optional, e.g. target username)',
-					default: '',
-					useVariables: true,
-				},
-			],
-			callback: async (e) => {
-				try {
-					const custom = await self.parseVariablesInString(e.options.custom_command || '')
-					const cmd = (custom.trim() || e.options.command || '').trim().replace(/^!/, '')
-					if (!cmd) return
-					const arg = await self.parseVariablesInString(e.options.arg || '')
-					await self.api.chatRun(cmd, arg, 'StreamDeck')
-					self.poll()
-				} catch (err) {
-					self.log('error', err.message)
-				}
-			},
-		},
-		chat_quote: {
-			name: 'Chat bot: send a quote to chat',
-			description: 'Posts a quote to chat. Leave ID blank for a random quote or specify a quote ID number.',
+				'Replaces the current bracket with fresh entrants and settings. Requires confirmation; blocked while a linked vote runs.',
 			options: [
 				{
 					id: 'id',
 					type: 'textinput',
-					label: 'Quote ID (optional, blank = random)',
+					label: 'Template ID (from /api/polls/tournament/presets)',
+					default: '',
+					useVariables: true,
+				},
+				{
+					id: 'confirm',
+					type: 'checkbox',
+					label: 'I confirm this button may replace the current poll bracket',
+					default: false,
+				},
+			],
+			callback: async ({ options }) =>
+				run(async () => {
+					if (options.confirm !== true) throw new Error('Confirm replacing the current poll bracket before creating.')
+					const id = (await self.parseVariablesInString(options.id || '')).trim()
+					if (!id) throw new Error('A poll tournament template ID is required.')
+					const result = await self.api.tournamentPresets(true)
+					const preset = ((result && result.presets) || []).find((p) => p.id === id)
+					if (!preset) throw new Error(`Poll tournament template not found: ${id}`)
+					const body = {}
+					for (const key of [
+						'title',
+						'entrants',
+						'format',
+						'logo',
+						'logoSize',
+						'matchDuration',
+						'blind',
+						'subMultiplier',
+						'announceChat',
+						'roundRobinLegs',
+						'pointsSystem',
+						'pointsPerWin',
+						'pointsPerDraw',
+						'pointsPerLoss',
+						'allowDraws',
+					]) {
+						if (preset[key] !== undefined) body[key] = preset[key]
+					}
+					return self.api.tournamentPost(
+						'/create',
+						{ ...body, progressionMode: 'vote', scoringType: 'points', bestOf: 0, isPoll: true },
+						true,
+					)
+				})(),
+		},
+		poll_tournament_restore: {
+			name: 'Poll Tournament: Load saved bracket / checkpoint',
+			description:
+				'Replaces the current bracket. Requires confirmation; blocked while any vote runs. Unfinished matches need a new vote.',
+			options: [
+				{
+					id: 'id',
+					type: 'textinput',
+					label: 'Saved bracket / checkpoint ID (from /api/polls/tournament/history)',
+					default: '',
+					useVariables: true,
+				},
+				{
+					id: 'confirm',
+					type: 'checkbox',
+					label: 'I confirm this button may replace the current poll bracket',
+					default: false,
+				},
+			],
+			callback: async ({ options }) =>
+				run(async () => {
+					if (options.confirm !== true) throw new Error('Confirm replacing the current poll bracket before loading.')
+					const id = (await self.parseVariablesInString(options.id || '')).trim()
+					if (!id) throw new Error('A saved bracket / checkpoint ID is required.')
+					return self.api.tournamentPost('/history/restore', { id }, true)
+				})(),
+		},
+		poll_tournament_save_checkpoint: {
+			name: 'Poll Tournament: Save progress checkpoint',
+			description: 'Save bracket progress without interrupting a running vote. Individual voters are not saved.',
+			options: [
+				{
+					id: 'name',
+					type: 'textinput',
+					label: 'Checkpoint name (optional)',
 					default: '',
 					useVariables: true,
 				},
 			],
-			callback: async (e) => {
-				try {
-					const id = await self.parseVariablesInString(e.options.id || '')
-					await self.api.chatQuote(id.trim())
-					self.poll()
-				} catch (err) {
-					self.log('error', err.message)
-				}
-			},
+			callback: async ({ options }) =>
+				run(async () =>
+					self.api.tournamentPost(
+						'/checkpoints',
+						{ name: (await self.parseVariablesInString(options.name || '')).trim() },
+						true,
+					),
+				)(),
 		},
-		restart_server: {
-			name: 'Server: restart StreamPulse',
-			description: 'Restarts the StreamPulse process; the active session continues',
-			options: [],
-			callback: async () => {
-				try {
-					await self.api.restartServer()
-				} catch (err) {
-					self.log('error', err.message)
-				}
-			},
-		},
-		stop_server: {
-			name: 'Server: stop StreamPulse',
-			description:
-				'Shuts StreamPulse down and archives the current session. Companion cannot start it again; use a shell script for that.',
-			options: [],
-			callback: async () => {
-				try {
-					await self.api.stopServer()
-				} catch (err) {
-					self.log('error', err.message)
-				}
-			},
-		},
-		start_session: {
-			name: 'Session: start a new session',
-			options: [],
-			callback: async () => run(() => self.api.startSession())(),
-		},
-		end_session: {
-			name: 'Session: end and archive',
-			options: [],
-			callback: async () => run(() => self.api.endSession())(),
-		},
-		reset_session_data: {
-			name: 'Session: reset chat data without archiving',
-			description: 'Clears active chat data without saving to session archives',
-			options: [],
-			callback: async () => run(() => self.api.resetSession())(),
-		},
-		variable_roll: {
-			name: 'Variable: roll list / topic',
-			description: 'Advance or randomize a StreamPulse list variable (e.g. topic list, challenge wheel)',
-			options: [{ id: 'name', type: 'textinput', label: 'List variable name', default: '' }],
-			callback: async (e) => run(() => self.api.variableRoll(e.options.name))(),
-		},
-		alert_test_event: {
-			name: 'Alerts: simulate stream event',
-			description: 'Test overlays by firing a simulated Twitch or stream event',
+		poll_tournament_save_template: {
+			name: 'Poll Tournament: Save active bracket as template',
+			description: 'Save entrants and settings for a fresh bracket later. Does not interrupt a running vote.',
 			options: [
 				{
-					id: 'trigger',
-					type: 'dropdown',
-					label: 'Event Type',
-					default: 'follow',
-					choices: [
-						{ id: 'follow', label: 'Follow' },
-						{ id: 'sub', label: 'New Subscription' },
-						{ id: 'resub', label: 'Resub' },
-						{ id: 'gift', label: 'Gifted Sub' },
-						{ id: 'bits', label: 'Cheer / Bits' },
-						{ id: 'donation', label: 'Donation' },
-						{ id: 'raid', label: 'Raid' },
-						{ id: 'redeem', label: 'Channel Points Redeem' },
-					],
+					id: 'name',
+					type: 'textinput',
+					label: 'Template name (optional)',
+					default: '',
+					useVariables: true,
 				},
-				{ id: 'user', type: 'textinput', label: 'Viewer name (optional)', default: 'TestViewer' },
-				{ id: 'amount', type: 'number', label: 'Amount (bits, months, viewers)', default: 100, min: 1, max: 100000 },
 			],
-			callback: async (e) =>
-				run(() => self.api.alertTestEvent(e.options.trigger, { user: e.options.user, amount: e.options.amount }))(),
+			callback: async ({ options }) =>
+				run(async () =>
+					self.api.tournamentPost(
+						'/presets',
+						{ name: (await self.parseVariablesInString(options.name || '')).trim(), fromActive: true },
+						true,
+					),
+				)(),
+		},
+		matchup_score: {
+			name: 'Versus: Change game or round score',
+			options: [
+				{
+					id: 'runner',
+					type: 'dropdown',
+					label: 'Competitor',
+					choices: [
+						{ id: 0, label: 'Competitor 1' },
+						{ id: 1, label: 'Competitor 2' },
+						{ id: 2, label: 'Competitor 3' },
+						{ id: 3, label: 'Competitor 4' },
+					],
+					default: 0,
+				},
+				{
+					id: 'target',
+					type: 'dropdown',
+					label: 'Score Type',
+					choices: [
+						{ id: 'game', label: 'Game Score (Match Pips / Series)' },
+						{ id: 'round', label: 'Round in Game (Round Pips)' },
+					],
+					default: 'game',
+				},
+				{ id: 'delta', type: 'number', label: 'Change (+/-)', default: 1, min: -100, max: 100 },
+			],
+			callback: async ({ options }) =>
+				run(() => {
+					const payload = { index: Number(options.runner) || 0 }
+					if (options.target === 'round') {
+						payload.roundDelta = Number(options.delta) || 0
+					} else {
+						payload.delta = Number(options.delta) || 0
+					}
+					return self.api.matchupPost('/score', payload)
+				})(),
+		},
+		matchup_clock: {
+			name: 'Versus: Clock / speedrun race control',
+			options: [
+				{
+					id: 'action',
+					type: 'dropdown',
+					label: 'Action',
+					choices: [
+						{ id: '/clock/start', label: 'Start clock' },
+						{ id: '/clock/pause', label: 'Pause clock' },
+						{ id: '/clock/reset', label: 'Reset clock' },
+						{ id: '/clock/race/start-all', label: 'Race: start all runners (sync)' },
+						{ id: '/clock/race/pause-all', label: 'Race: pause all runners' },
+						{ id: '/clock/race/reset-all', label: 'Race: reset all runners' },
+						{ id: 'timers_finish', label: 'Race Timers: Main Clock Only — Reveal on Finish (+Delta)' },
+						{ id: 'timers_always', label: 'Race Timers: Always Show Live Runner Timers' },
+						{ id: 'timers_toggle', label: 'Race Timers: Toggle Reveal on Finish vs Always Show' },
+						{ id: 'mode_race', label: 'Clock Mode: Speedrun Race' },
+						{ id: 'mode_countdown', label: 'Clock Mode: Countdown' },
+						{ id: 'mode_stopwatch', label: 'Clock Mode: Stopwatch' },
+						{ id: 'none', label: 'Clock: set to None (hidden)' },
+					],
+					default: '/clock/start',
+				},
+			],
+			callback: async ({ options }) =>
+				run(() => {
+					if (options.action === 'none') return self.api.matchupPost('/clock/set', { enabled: false })
+					if (options.action === 'mode_race') return self.api.matchupPost('/clock/set', { enabled: true, mode: 'race' })
+					if (options.action === 'mode_countdown')
+						return self.api.matchupPost('/clock/set', { enabled: true, mode: 'countdown' })
+					if (options.action === 'mode_stopwatch')
+						return self.api.matchupPost('/clock/set', { enabled: true, mode: 'stopwatch' })
+					if (options.action === 'timers_finish')
+						return self.api.matchupPost('/clock/set', { runnerTimersMode: 'finish' })
+					if (options.action === 'timers_always')
+						return self.api.matchupPost('/clock/set', { runnerTimersMode: 'always' })
+					if (options.action === 'timers_toggle') {
+						const cur =
+							self.state.matchup && self.state.matchup.clock && self.state.matchup.clock.runnerTimersMode === 'always'
+								? 'always'
+								: 'finish'
+						return self.api.matchupPost('/clock/set', {
+							runnerTimersMode: cur === 'finish' ? 'always' : 'finish',
+						})
+					}
+					return self.api.matchupPost(options.action)
+				})(),
+		},
+		matchup_runner: {
+			name: 'Versus: Runner finish / toggle / reset',
+			options: [
+				{
+					id: 'runner',
+					type: 'dropdown',
+					label: 'Runner',
+					choices: [
+						{ id: 0, label: 'Runner 1' },
+						{ id: 1, label: 'Runner 2' },
+						{ id: 2, label: 'Runner 3' },
+						{ id: 3, label: 'Runner 4' },
+					],
+					default: 0,
+				},
+				{
+					id: 'action',
+					type: 'dropdown',
+					label: 'Action',
+					choices: [
+						{ id: 'finish', label: 'Finish (Lock Split & Reveal Delta)' },
+						{ id: 'toggle', label: 'Start / pause individual runner' },
+						{ id: 'reset', label: 'Reset individual runner' },
+					],
+					default: 'finish',
+				},
+			],
+			callback: async ({ options }) =>
+				run(() => self.api.matchupPost(`/clock/race/${options.action}`, { index: Number(options.runner) || 0 }))(),
+		},
+		matchup_general: {
+			name: 'Versus: Swap sides / reset scores / queue / presets',
+			options: [
+				{
+					id: 'action',
+					type: 'dropdown',
+					label: 'Action',
+					choices: [
+						{ id: '/swap', label: 'Swap sides (P1 <-> P2)' },
+						{ id: '/reset-scores', label: 'Reset scores & rounds (0-0)' },
+						{ id: '/history/snapshot', label: 'Save progress to match history' },
+						{ id: '/queue/next', label: 'Next matchup in queue' },
+						{ id: '/queue/prev', label: 'Previous matchup in queue' },
+						{ id: '/presets/load', label: 'Load matchup preset' },
+					],
+					default: '/history/snapshot',
+				},
+				{
+					id: 'preset',
+					type: 'dropdown',
+					label: 'Matchup Preset',
+					choices: matchupPresetChoices(self),
+					default: matchupPresetChoices(self)[0].id,
+					isVisibleExpression: `$(options:action) == '/presets/load'`,
+				},
+			],
+			callback: async ({ options }) =>
+				run(() =>
+					options.action === '/presets/load'
+						? self.api.matchupPost('/presets/load', { id: options.preset })
+						: self.api.matchupPost(options.action),
+				)(),
+		},
+		tournament_control: {
+			name: 'Tournament: Match selection, highlight & bracket control',
+			options: [
+				{
+					id: 'action',
+					type: 'dropdown',
+					label: 'Action',
+					choices: [
+						{ id: 'next_match', label: 'Select Next Ready Match' },
+						{ id: 'prev_match', label: 'Select Previous Ready Match' },
+						{ id: 'select_match', label: 'Pin Specific Match as Live' },
+						{ id: 'unpin_match', label: 'Unpin Live Match (Concurrent Play)' },
+						{ id: 'toggle_highlight', label: 'Toggle Live Match Highlight on Bracket' },
+						{ id: 'reset_match', label: 'Reset Match Scores (0-0)' },
+						{ id: 'rollback_match', label: 'Rollback / Reopen Completed Match' },
+						{ id: 'start_poll_match', label: 'Poll Tournament: Launch Audience Vote for Active Match' },
+					],
+					default: 'next_match',
+				},
+				{
+					id: 'matchId',
+					type: 'dropdown',
+					label: 'Target Match (optional)',
+					choices: tournamentMatchChoices(self),
+					default: '',
+					isVisibleExpression: `$(options:action) == 'select_match' || $(options:action) == 'reset_match' || $(options:action) == 'rollback_match'`,
+				},
+			],
+			callback: async ({ options }) =>
+				run(() => {
+					const t = self.state.tournament
+					if (options.action === 'start_poll_match') {
+						const pm = resolveActiveTournamentMatch(self, options.matchId, true)
+						if (!pm) return
+						return self.api.tournamentPost('/start-match', { matchId: pm.id }, true)
+					}
+					if (!t) return
+					const ready = (t.matches || []).filter((m) => isReadyMatch(m) && !isCompletedMatch(m))
+					if (options.action === 'next_match' || options.action === 'prev_match') {
+						if (!ready.length) return
+						const idx = ready.findIndex((m) => m.id === t.activeMatchId)
+						const step = options.action === 'next_match' ? 1 : -1
+						const nextIdx = idx === -1 ? 0 : (idx + step + ready.length) % ready.length
+						return self.api.tournamentPost('/select-match', { matchId: ready[nextIdx].id }, false)
+					}
+					if (options.action === 'select_match') {
+						const m = resolveActiveTournamentMatch(self, options.matchId, false)
+						return self.api.tournamentPost('/select-match', { matchId: m ? m.id : null }, false)
+					}
+					if (options.action === 'unpin_match') {
+						return self.api.tournamentPost('/select-match', { matchId: null }, false)
+					}
+					if (options.action === 'toggle_highlight') {
+						const cur = t.highlightLive !== false
+						return self.api.tournamentPost('/settings', { highlightLive: !cur }, false)
+					}
+					if (options.action === 'reset_match') {
+						const m = resolveActiveTournamentMatch(self, options.matchId, false)
+						if (!m) return
+						return self.api.tournamentPost('/reset-match', { matchId: m.id }, false)
+					}
+					if (options.action === 'rollback_match') {
+						const m = resolveActiveTournamentMatch(self, options.matchId, false)
+						if (!m) return
+						return self.api.tournamentPost('/rollback', { matchId: m.id }, false)
+					}
+				})(),
+		},
+		tournament_score: {
+			name: 'Tournament: Change match game or round score',
+			description: 'Score an entrant in the active (or selected) tournament bracket match',
+			options: [
+				{
+					id: 'matchId',
+					type: 'dropdown',
+					label: 'Match',
+					choices: tournamentMatchChoices(self),
+					default: '',
+				},
+				{
+					id: 'entrant',
+					type: 'dropdown',
+					label: 'Entrant',
+					choices: [
+						{ id: 0, label: 'Entrant 1 (Left / Top)' },
+						{ id: 1, label: 'Entrant 2 (Right / Bottom)' },
+					],
+					default: 0,
+				},
+				{
+					id: 'target',
+					type: 'dropdown',
+					label: 'Score Type',
+					choices: [
+						{ id: 'game', label: 'Game Score (Series Wins)' },
+						{ id: 'round', label: 'Round in Game (Round Pips)' },
+					],
+					default: 'game',
+				},
+				{ id: 'delta', type: 'number', label: 'Change (+/-)', default: 1, min: -50, max: 50 },
+			],
+			callback: async ({ options }) =>
+				run(() => {
+					const m = resolveActiveTournamentMatch(self, options.matchId, false)
+					if (!m) return
+					const idx = Number(options.entrant) || 0
+					const name = entrantName(idx === 0 ? m.entrant1 : m.entrant2)
+					const d = Number(options.delta) || 0
+					if (options.target === 'round') {
+						return self.api.tournamentPost(
+							'/score',
+							{ matchId: m.id, entrant: name, entrantIndex: idx, roundDelta: d },
+							false,
+						)
+					}
+					const nextScore = Math.max(0, entrantScore(m, idx) + d)
+					return self.api.tournamentPost(
+						'/score',
+						{
+							matchId: m.id,
+							entrant: name,
+							entrantIndex: idx,
+							delta: d,
+							...(idx === 0 ? { entrant1Score: nextScore } : { entrant2Score: nextScore }),
+						},
+						false,
+					)
+				})(),
+		},
+		tournament_advance: {
+			name: 'Tournament: Confirm & advance match winner',
+			description: 'Advance the winner of the active (or selected) match to the next bracket round',
+			options: [
+				{
+					id: 'matchId',
+					type: 'dropdown',
+					label: 'Match',
+					choices: tournamentMatchChoices(self),
+					default: '',
+				},
+				{
+					id: 'winner',
+					type: 'dropdown',
+					label: 'Winner to Advance',
+					choices: [
+						{ id: 'auto', label: 'Auto (Leading Entrant / Target Met)' },
+						{ id: 'e1', label: 'Entrant 1 (Left / Top)' },
+						{ id: 'e2', label: 'Entrant 2 (Right / Bottom)' },
+						{ id: 'draw', label: 'Draw / Tie (Round Robin / Swiss)' },
+					],
+					default: 'auto',
+				},
+			],
+			callback: async ({ options }) =>
+				run(() => {
+					const m = resolveActiveTournamentMatch(self, options.matchId, false)
+					if (!m) return
+					if (options.winner === 'draw') {
+						return self.api.tournamentPost('/advance', { matchId: m.id, winner: 'DRAW', isDraw: true }, false)
+					}
+					const n1 = entrantName(m.entrant1)
+					const n2 = entrantName(m.entrant2)
+					const s1 = entrantScore(m, 0)
+					const s2 = entrantScore(m, 1)
+					const r1 = entrantRounds(m, 0)
+					const r2 = entrantRounds(m, 1)
+					let winnerName = null
+					if (options.winner === 'e1') winnerName = n1
+					else if (options.winner === 'e2') winnerName = n2
+					else if (m.pendingWinner) winnerName = m.pendingWinner
+					else if (s1 > s2) winnerName = n1
+					else if (s2 > s1) winnerName = n2
+					else if (r1 > r2) winnerName = n1
+					else if (r2 > r1) winnerName = n2
+					else winnerName = n1
+					if (!winnerName) return
+					return self.api.tournamentPost('/advance', { matchId: m.id, winner: winnerName }, false)
+				})(),
+		},
+		tournament_view: {
+			name: 'Tournament: Bracket camera focus, round pan & section view',
+			description: 'Control live camera framing, pan across rounds, or switch bracket sections on active OBS overlays',
+			options: [
+				{
+					id: 'target',
+					type: 'dropdown',
+					label: 'Target Overlay',
+					choices: [
+						{ id: 'versus', label: 'Versus Bracket (/overlays/tournament.html)' },
+						{ id: 'poll', label: 'Audience Poll Bracket (/overlays/poll-tournament.html)' },
+					],
+					default: 'versus',
+				},
+				{
+					id: 'focus',
+					type: 'dropdown',
+					label: 'Camera Focus / Zoom Mode',
+					choices: [
+						{ id: 'no_change', label: 'No Change' },
+						{ id: 'toggle', label: 'Toggle Focus Mode (Zoom In / Full Overview)' },
+						{ id: '1', label: 'Enable Camera Focus (Zoomed In on Match)' },
+						{ id: '0', label: 'Disable Camera Focus (Full Bracket Overview)' },
+					],
+					default: 'toggle',
+				},
+				{
+					id: 'round',
+					type: 'dropdown',
+					label: 'Round Camera Pan',
+					choices: [
+						{ id: 'no_change', label: 'No Change' },
+						{ id: 'next', label: 'Next Round' },
+						{ id: 'prev', label: 'Previous Round' },
+						{ id: 'reset', label: 'Reset (Follow Active Match)' },
+						{ id: 'custom', label: 'Specific Round (Enter Number or Name Below)' },
+					],
+					default: 'no_change',
+				},
+				{
+					id: 'roundValue',
+					type: 'textinput',
+					label: 'Custom Round Number or Name (e.g. 2, Semifinals)',
+					default: '',
+					isVisibleExpression: `$(options:round) == 'custom'`,
+				},
+				{
+					id: 'bracket',
+					type: 'dropdown',
+					label: 'Bracket Section (Double Elimination)',
+					choices: [
+						{ id: 'no_change', label: 'No Change' },
+						{ id: 'cycle', label: 'Cycle Next Section' },
+						{ id: 'all', label: 'All Sections' },
+						{ id: 'winners', label: 'Winners Bracket' },
+						{ id: 'losers', label: 'Losers Bracket' },
+						{ id: 'finals', label: 'Grand Finals' },
+					],
+					default: 'no_change',
+				},
+				{
+					id: 'glide',
+					type: 'dropdown',
+					label: 'Transitions',
+					choices: [
+						{ id: 'no_change', label: 'No Change' },
+						{ id: '1', label: 'Smooth Glide (0.85s)' },
+						{ id: '0', label: 'Instant Snap (No Transition)' },
+					],
+					default: 'no_change',
+				},
+				{
+					id: 'matchId',
+					type: 'dropdown',
+					label: 'Target Specific Match (optional)',
+					choices: tournamentMatchChoices(self),
+					default: '',
+				},
+			],
+			callback: async ({ options }) =>
+				run(() => {
+					const isPoll = options.target === 'poll'
+					const body = {}
+					if (options.focus && options.focus !== 'no_change') {
+						body.focus = options.focus
+					}
+					if (options.round && options.round !== 'no_change') {
+						body.round = options.round === 'custom' ? options.roundValue : options.round
+					}
+					if (options.bracket && options.bracket !== 'no_change') {
+						body.bracket = options.bracket
+					}
+					if (options.glide && options.glide !== 'no_change') {
+						body.glide = options.glide
+					}
+					if (options.matchId) {
+						body.matchId = options.matchId
+					}
+					return self.api.tournamentPost('/view', body, isPoll)
+				})(),
 		},
 		randomizer_spin: {
-			name: 'Randomizer: spin wheel, roller or card deck',
+			name: 'Randomizer: Spin wheel, roller or card deck',
 			description: 'Trigger a live randomizer spin on stream overlays',
 			options: [
 				{
@@ -831,667 +1374,8 @@ module.exports = function (self) {
 				})()
 			},
 		},
-		matchup_score: {
-			name: 'Versus: change game or round score',
-			options: [
-				{
-					id: 'runner',
-					type: 'dropdown',
-					label: 'Competitor',
-					choices: [
-						{ id: 0, label: 'Competitor 1' },
-						{ id: 1, label: 'Competitor 2' },
-						{ id: 2, label: 'Competitor 3' },
-						{ id: 3, label: 'Competitor 4' },
-					],
-					default: 0,
-				},
-				{
-					id: 'target',
-					type: 'dropdown',
-					label: 'Score Type',
-					choices: [
-						{ id: 'game', label: 'Game Score (Match Pips / Series)' },
-						{ id: 'round', label: 'Round in Game (Round Pips)' },
-					],
-					default: 'game',
-				},
-				{ id: 'delta', type: 'number', label: 'Change (+/-)', default: 1, min: -100, max: 100 },
-			],
-			callback: async ({ options }) =>
-				run(() => {
-					const payload = { index: Number(options.runner) || 0 }
-					if (options.target === 'round') {
-						payload.roundDelta = Number(options.delta) || 0
-					} else {
-						payload.delta = Number(options.delta) || 0
-					}
-					return self.api.matchupPost('/score', payload)
-				})(),
-		},
-		matchup_clock: {
-			name: 'Versus: clock / speedrun race control',
-			options: [
-				{
-					id: 'action',
-					type: 'dropdown',
-					label: 'Action',
-					choices: [
-						{ id: '/clock/start', label: 'Start clock' },
-						{ id: '/clock/pause', label: 'Pause clock' },
-						{ id: '/clock/reset', label: 'Reset clock' },
-						{ id: '/clock/race/start-all', label: 'Race: start all runners (sync)' },
-						{ id: '/clock/race/pause-all', label: 'Race: pause all runners' },
-						{ id: '/clock/race/reset-all', label: 'Race: reset all runners' },
-						{ id: 'timers_finish', label: 'Race Timers: Main Clock Only — Reveal on Finish (+Delta)' },
-						{ id: 'timers_always', label: 'Race Timers: Always Show Live Runner Timers' },
-						{ id: 'timers_toggle', label: 'Race Timers: Toggle Reveal on Finish vs Always Show' },
-						{ id: 'mode_race', label: 'Clock Mode: Speedrun Race' },
-						{ id: 'mode_countdown', label: 'Clock Mode: Countdown' },
-						{ id: 'mode_stopwatch', label: 'Clock Mode: Stopwatch' },
-						{ id: 'none', label: 'Clock: set to None (hidden)' },
-					],
-					default: '/clock/start',
-				},
-			],
-			callback: async ({ options }) =>
-				run(() => {
-					if (options.action === 'none') return self.api.matchupPost('/clock/set', { enabled: false })
-					if (options.action === 'mode_race') return self.api.matchupPost('/clock/set', { enabled: true, mode: 'race' })
-					if (options.action === 'mode_countdown')
-						return self.api.matchupPost('/clock/set', { enabled: true, mode: 'countdown' })
-					if (options.action === 'mode_stopwatch')
-						return self.api.matchupPost('/clock/set', { enabled: true, mode: 'stopwatch' })
-					if (options.action === 'timers_finish')
-						return self.api.matchupPost('/clock/set', { runnerTimersMode: 'finish' })
-					if (options.action === 'timers_always')
-						return self.api.matchupPost('/clock/set', { runnerTimersMode: 'always' })
-					if (options.action === 'timers_toggle') {
-						const cur =
-							self.state.matchup && self.state.matchup.clock && self.state.matchup.clock.runnerTimersMode === 'always'
-								? 'always'
-								: 'finish'
-						return self.api.matchupPost('/clock/set', {
-							runnerTimersMode: cur === 'finish' ? 'always' : 'finish',
-						})
-					}
-					return self.api.matchupPost(options.action)
-				})(),
-		},
-		matchup_runner: {
-			name: 'Versus: runner finish / toggle / reset',
-			options: [
-				{
-					id: 'runner',
-					type: 'dropdown',
-					label: 'Runner',
-					choices: [
-						{ id: 0, label: 'Runner 1' },
-						{ id: 1, label: 'Runner 2' },
-						{ id: 2, label: 'Runner 3' },
-						{ id: 3, label: 'Runner 4' },
-					],
-					default: 0,
-				},
-				{
-					id: 'action',
-					type: 'dropdown',
-					label: 'Action',
-					choices: [
-						{ id: 'finish', label: 'Finish (Lock Split & Reveal Delta)' },
-						{ id: 'toggle', label: 'Start / pause individual runner' },
-						{ id: 'reset', label: 'Reset individual runner' },
-					],
-					default: 'finish',
-				},
-			],
-			callback: async ({ options }) =>
-				run(() => self.api.matchupPost(`/clock/race/${options.action}`, { index: Number(options.runner) || 0 }))(),
-		},
-		matchup_general: {
-			name: 'Versus: swap sides / reset scores / queue / presets',
-			options: [
-				{
-					id: 'action',
-					type: 'dropdown',
-					label: 'Action',
-					choices: [
-						{ id: '/swap', label: 'Swap sides (P1 <-> P2)' },
-						{ id: '/reset-scores', label: 'Reset scores & rounds (0-0)' },
-						{ id: '/history/snapshot', label: 'Save progress to match history' },
-						{ id: '/queue/next', label: 'Next matchup in queue' },
-						{ id: '/queue/prev', label: 'Previous matchup in queue' },
-						{ id: '/presets/load', label: 'Load matchup preset' },
-					],
-					default: '/history/snapshot',
-				},
-				{
-					id: 'preset',
-					type: 'dropdown',
-					label: 'Matchup Preset',
-					choices: matchupPresetChoices(self),
-					default: matchupPresetChoices(self)[0].id,
-					isVisibleExpression: `$(options:action) == '/presets/load'`,
-				},
-			],
-			callback: async ({ options }) =>
-				run(() =>
-					options.action === '/presets/load'
-						? self.api.matchupPost('/presets/load', { id: options.preset })
-						: self.api.matchupPost(options.action),
-				)(),
-		},
-		poll_start: {
-			name: 'Polls: start poll (preset or custom)',
-			description: 'Launch an audience poll from a saved preset or custom question & choices',
-			options: [
-				{
-					id: 'preset',
-					type: 'dropdown',
-					label: 'Poll Preset',
-					choices: pollPresetChoices(self),
-					default: '',
-				},
-				{
-					id: 'title',
-					type: 'textinput',
-					label: 'Custom Question / Title (used if no preset selected, or to override)',
-					default: '',
-					useVariables: true,
-				},
-				{
-					id: 'choices',
-					type: 'textinput',
-					label: 'Choices (comma-separated, e.g. Yes, No, Maybe)',
-					default: 'Option 1, Option 2',
-					useVariables: true,
-					isVisibleExpression: `$(options:preset) == ''`,
-				},
-				{
-					id: 'duration',
-					type: 'number',
-					label: 'Duration (seconds)',
-					default: 60,
-					min: 15,
-					max: 1800,
-				},
-				{
-					id: 'blind',
-					type: 'checkbox',
-					label: 'Blind Voting (hide percentages until poll ends)',
-					default: false,
-				},
-				{
-					id: 'subMultiplier',
-					type: 'checkbox',
-					label: '2x Subscriber Vote Weight',
-					default: false,
-				},
-			],
-			callback: async ({ options }) =>
-				run(async () => {
-					const preset = (self.state.pollPresets || []).find((p) => p.id === options.preset)
-					const customTitle = (await self.parseVariablesInString(options.title || '')).trim()
-					if (preset) {
-						return self.api.pollCreate({
-							title: customTitle || preset.title || preset.name || 'Poll',
-							choices: preset.choices || [],
-							duration: Number(options.duration) || Number(preset.duration) || 60,
-							blind: options.blind !== undefined ? !!options.blind : !!preset.blind,
-							subMultiplier: options.subMultiplier ? 2 : Number(preset.subMultiplier) || 1,
-						})
-					}
-					const rawChoices = await self.parseVariablesInString(options.choices || '')
-					const choices = rawChoices
-						.split(',')
-						.map((c) => c.trim())
-						.filter(Boolean)
-						.map((label) => ({ label }))
-					return self.api.pollCreate({
-						title: customTitle || 'Chat Poll',
-						choices: choices.length >= 2 ? choices : [{ label: 'Option 1' }, { label: 'Option 2' }],
-						duration: Number(options.duration) || 60,
-						blind: !!options.blind,
-						subMultiplier: options.subMultiplier ? 2 : 1,
-					})
-				})(),
-		},
-		poll_control: {
-			name: 'Polls: end / extend / cancel active poll',
-			options: [
-				{
-					id: 'action',
-					type: 'dropdown',
-					label: 'Action',
-					choices: [
-						{ id: 'end', label: 'End Poll & Crown Winner' },
-						{ id: 'extend', label: 'Extend Poll Timer (+seconds)' },
-						{ id: 'cancel', label: 'Cancel / Dismiss Poll' },
-					],
-					default: 'end',
-				},
-				{
-					id: 'seconds',
-					type: 'number',
-					label: 'Seconds to Add',
-					default: 30,
-					min: 5,
-					max: 600,
-					isVisibleExpression: `$(options:action) == 'extend'`,
-				},
-			],
-			callback: async ({ options }) =>
-				run(() => {
-					if (options.action === 'extend') return self.api.pollExtend(Number(options.seconds) || 30)
-					if (options.action === 'cancel') return self.api.pollCancel()
-					return self.api.pollEnd()
-				})(),
-		},
-		poll_tournament_save_template: {
-			name: 'Poll Tournament: save active bracket as template',
-			description: 'Save entrants and settings for a fresh bracket later. Does not interrupt a running vote.',
-			options: [
-				{
-					id: 'name',
-					type: 'textinput',
-					label: 'Template name (optional)',
-					default: '',
-					useVariables: true,
-				},
-			],
-			callback: async ({ options }) =>
-				run(async () =>
-					self.api.tournamentPost(
-						'/presets',
-						{ name: (await self.parseVariablesInString(options.name || '')).trim(), fromActive: true },
-						true,
-					),
-				)(),
-		},
-		poll_tournament_save_checkpoint: {
-			name: 'Poll Tournament: save progress checkpoint',
-			description: 'Save bracket progress without interrupting a running vote. Individual voters are not saved.',
-			options: [
-				{
-					id: 'name',
-					type: 'textinput',
-					label: 'Checkpoint name (optional)',
-					default: '',
-					useVariables: true,
-				},
-			],
-			callback: async ({ options }) =>
-				run(async () =>
-					self.api.tournamentPost(
-						'/checkpoints',
-						{ name: (await self.parseVariablesInString(options.name || '')).trim() },
-						true,
-					),
-				)(),
-		},
-		poll_tournament_restore: {
-			name: 'Poll Tournament: load saved bracket / checkpoint',
-			description:
-				'Replaces the current bracket. Requires confirmation; blocked while any vote runs. Unfinished matches need a new vote.',
-			options: [
-				{
-					id: 'id',
-					type: 'textinput',
-					label: 'Saved bracket / checkpoint ID (from /api/polls/tournament/history)',
-					default: '',
-					useVariables: true,
-				},
-				{
-					id: 'confirm',
-					type: 'checkbox',
-					label: 'I confirm this button may replace the current poll bracket',
-					default: false,
-				},
-			],
-			callback: async ({ options }) =>
-				run(async () => {
-					if (options.confirm !== true) throw new Error('Confirm replacing the current poll bracket before loading.')
-					const id = (await self.parseVariablesInString(options.id || '')).trim()
-					if (!id) throw new Error('A saved bracket / checkpoint ID is required.')
-					return self.api.tournamentPost('/history/restore', { id }, true)
-				})(),
-		},
-		poll_tournament_create_from_template: {
-			name: 'Poll Tournament: create fresh bracket from template',
-			description:
-				'Replaces the current bracket with fresh entrants and settings. Requires confirmation; blocked while a linked vote runs.',
-			options: [
-				{
-					id: 'id',
-					type: 'textinput',
-					label: 'Template ID (from /api/polls/tournament/presets)',
-					default: '',
-					useVariables: true,
-				},
-				{
-					id: 'confirm',
-					type: 'checkbox',
-					label: 'I confirm this button may replace the current poll bracket',
-					default: false,
-				},
-			],
-			callback: async ({ options }) =>
-				run(async () => {
-					if (options.confirm !== true) throw new Error('Confirm replacing the current poll bracket before creating.')
-					const id = (await self.parseVariablesInString(options.id || '')).trim()
-					if (!id) throw new Error('A poll tournament template ID is required.')
-					const result = await self.api.tournamentPresets(true)
-					const preset = ((result && result.presets) || []).find((p) => p.id === id)
-					if (!preset) throw new Error(`Poll tournament template not found: ${id}`)
-					const body = {}
-					for (const key of [
-						'title',
-						'entrants',
-						'format',
-						'logo',
-						'logoSize',
-						'matchDuration',
-						'blind',
-						'subMultiplier',
-						'announceChat',
-						'roundRobinLegs',
-						'pointsSystem',
-						'pointsPerWin',
-						'pointsPerDraw',
-						'pointsPerLoss',
-						'allowDraws',
-					]) {
-						if (preset[key] !== undefined) body[key] = preset[key]
-					}
-					return self.api.tournamentPost(
-						'/create',
-						{ ...body, progressionMode: 'vote', scoringType: 'points', bestOf: 0, isPoll: true },
-						true,
-					)
-				})(),
-		},
-		tournament_score: {
-			name: 'Tournament: change match game or round score',
-			description: 'Score an entrant in the active (or selected) tournament bracket match',
-			options: [
-				{
-					id: 'matchId',
-					type: 'dropdown',
-					label: 'Match',
-					choices: tournamentMatchChoices(self),
-					default: '',
-				},
-				{
-					id: 'entrant',
-					type: 'dropdown',
-					label: 'Entrant',
-					choices: [
-						{ id: 0, label: 'Entrant 1 (Left / Top)' },
-						{ id: 1, label: 'Entrant 2 (Right / Bottom)' },
-					],
-					default: 0,
-				},
-				{
-					id: 'target',
-					type: 'dropdown',
-					label: 'Score Type',
-					choices: [
-						{ id: 'game', label: 'Game Score (Series Wins)' },
-						{ id: 'round', label: 'Round in Game (Round Pips)' },
-					],
-					default: 'game',
-				},
-				{ id: 'delta', type: 'number', label: 'Change (+/-)', default: 1, min: -50, max: 50 },
-			],
-			callback: async ({ options }) =>
-				run(() => {
-					const m = resolveActiveTournamentMatch(self, options.matchId, false)
-					if (!m) return
-					const idx = Number(options.entrant) || 0
-					const name = entrantName(idx === 0 ? m.entrant1 : m.entrant2)
-					const d = Number(options.delta) || 0
-					if (options.target === 'round') {
-						return self.api.tournamentPost(
-							'/score',
-							{ matchId: m.id, entrant: name, entrantIndex: idx, roundDelta: d },
-							false,
-						)
-					}
-					const nextScore = Math.max(0, entrantScore(m, idx) + d)
-					return self.api.tournamentPost(
-						'/score',
-						{
-							matchId: m.id,
-							entrant: name,
-							entrantIndex: idx,
-							delta: d,
-							...(idx === 0 ? { entrant1Score: nextScore } : { entrant2Score: nextScore }),
-						},
-						false,
-					)
-				})(),
-		},
-		tournament_advance: {
-			name: 'Tournament: confirm & advance match winner',
-			description: 'Advance the winner of the active (or selected) match to the next bracket round',
-			options: [
-				{
-					id: 'matchId',
-					type: 'dropdown',
-					label: 'Match',
-					choices: tournamentMatchChoices(self),
-					default: '',
-				},
-				{
-					id: 'winner',
-					type: 'dropdown',
-					label: 'Winner to Advance',
-					choices: [
-						{ id: 'auto', label: 'Auto (Leading Entrant / Target Met)' },
-						{ id: 'e1', label: 'Entrant 1 (Left / Top)' },
-						{ id: 'e2', label: 'Entrant 2 (Right / Bottom)' },
-						{ id: 'draw', label: 'Draw / Tie (Round Robin / Swiss)' },
-					],
-					default: 'auto',
-				},
-			],
-			callback: async ({ options }) =>
-				run(() => {
-					const m = resolveActiveTournamentMatch(self, options.matchId, false)
-					if (!m) return
-					if (options.winner === 'draw') {
-						return self.api.tournamentPost('/advance', { matchId: m.id, winner: 'DRAW', isDraw: true }, false)
-					}
-					const n1 = entrantName(m.entrant1)
-					const n2 = entrantName(m.entrant2)
-					const s1 = entrantScore(m, 0)
-					const s2 = entrantScore(m, 1)
-					const r1 = entrantRounds(m, 0)
-					const r2 = entrantRounds(m, 1)
-					let winnerName = null
-					if (options.winner === 'e1') winnerName = n1
-					else if (options.winner === 'e2') winnerName = n2
-					else if (m.pendingWinner) winnerName = m.pendingWinner
-					else if (s1 > s2) winnerName = n1
-					else if (s2 > s1) winnerName = n2
-					else if (r1 > r2) winnerName = n1
-					else if (r2 > r1) winnerName = n2
-					else winnerName = n1
-					if (!winnerName) return
-					return self.api.tournamentPost('/advance', { matchId: m.id, winner: winnerName }, false)
-				})(),
-		},
-		tournament_control: {
-			name: 'Tournament: match selection, highlight & bracket control',
-			options: [
-				{
-					id: 'action',
-					type: 'dropdown',
-					label: 'Action',
-					choices: [
-						{ id: 'next_match', label: 'Select Next Ready Match' },
-						{ id: 'prev_match', label: 'Select Previous Ready Match' },
-						{ id: 'select_match', label: 'Pin Specific Match as Live' },
-						{ id: 'unpin_match', label: 'Unpin Live Match (Concurrent Play)' },
-						{ id: 'toggle_highlight', label: 'Toggle Live Match Highlight on Bracket' },
-						{ id: 'reset_match', label: 'Reset Match Scores (0-0)' },
-						{ id: 'rollback_match', label: 'Rollback / Reopen Completed Match' },
-						{ id: 'start_poll_match', label: 'Poll Tournament: Launch Audience Vote for Active Match' },
-					],
-					default: 'next_match',
-				},
-				{
-					id: 'matchId',
-					type: 'dropdown',
-					label: 'Target Match (optional)',
-					choices: tournamentMatchChoices(self),
-					default: '',
-					isVisibleExpression: `$(options:action) == 'select_match' || $(options:action) == 'reset_match' || $(options:action) == 'rollback_match'`,
-				},
-			],
-			callback: async ({ options }) =>
-				run(() => {
-					const t = self.state.tournament
-					if (options.action === 'start_poll_match') {
-						const pm = resolveActiveTournamentMatch(self, options.matchId, true)
-						if (!pm) return
-						return self.api.tournamentPost('/start-match', { matchId: pm.id }, true)
-					}
-					if (!t) return
-					const ready = (t.matches || []).filter((m) => isReadyMatch(m) && !isCompletedMatch(m))
-					if (options.action === 'next_match' || options.action === 'prev_match') {
-						if (!ready.length) return
-						const idx = ready.findIndex((m) => m.id === t.activeMatchId)
-						const step = options.action === 'next_match' ? 1 : -1
-						const nextIdx = idx === -1 ? 0 : (idx + step + ready.length) % ready.length
-						return self.api.tournamentPost('/select-match', { matchId: ready[nextIdx].id }, false)
-					}
-					if (options.action === 'select_match') {
-						const m = resolveActiveTournamentMatch(self, options.matchId, false)
-						return self.api.tournamentPost('/select-match', { matchId: m ? m.id : null }, false)
-					}
-					if (options.action === 'unpin_match') {
-						return self.api.tournamentPost('/select-match', { matchId: null }, false)
-					}
-					if (options.action === 'toggle_highlight') {
-						const cur = t.highlightLive !== false
-						return self.api.tournamentPost('/settings', { highlightLive: !cur }, false)
-					}
-					if (options.action === 'reset_match') {
-						const m = resolveActiveTournamentMatch(self, options.matchId, false)
-						if (!m) return
-						return self.api.tournamentPost('/reset-match', { matchId: m.id }, false)
-					}
-					if (options.action === 'rollback_match') {
-						const m = resolveActiveTournamentMatch(self, options.matchId, false)
-						if (!m) return
-						return self.api.tournamentPost('/rollback', { matchId: m.id }, false)
-					}
-				})(),
-		},
-		tournament_view: {
-			name: 'Tournament: bracket camera focus, round pan & section view',
-			description: 'Control live camera framing, pan across rounds, or switch bracket sections on active OBS overlays',
-			options: [
-				{
-					id: 'target',
-					type: 'dropdown',
-					label: 'Target Overlay',
-					choices: [
-						{ id: 'versus', label: 'Versus Bracket (/overlays/tournament.html)' },
-						{ id: 'poll', label: 'Audience Poll Bracket (/overlays/poll-tournament.html)' },
-					],
-					default: 'versus',
-				},
-				{
-					id: 'focus',
-					type: 'dropdown',
-					label: 'Camera Focus / Zoom Mode',
-					choices: [
-						{ id: 'no_change', label: 'No Change' },
-						{ id: 'toggle', label: 'Toggle Focus Mode (Zoom In / Full Overview)' },
-						{ id: '1', label: 'Enable Camera Focus (Zoomed In on Match)' },
-						{ id: '0', label: 'Disable Camera Focus (Full Bracket Overview)' },
-					],
-					default: 'toggle',
-				},
-				{
-					id: 'round',
-					type: 'dropdown',
-					label: 'Round Camera Pan',
-					choices: [
-						{ id: 'no_change', label: 'No Change' },
-						{ id: 'next', label: 'Next Round' },
-						{ id: 'prev', label: 'Previous Round' },
-						{ id: 'reset', label: 'Reset (Follow Active Match)' },
-						{ id: 'custom', label: 'Specific Round (Enter Number or Name Below)' },
-					],
-					default: 'no_change',
-				},
-				{
-					id: 'roundValue',
-					type: 'textinput',
-					label: 'Custom Round Number or Name (e.g. 2, Semifinals)',
-					default: '',
-					isVisibleExpression: `$(options:round) == 'custom'`,
-				},
-				{
-					id: 'bracket',
-					type: 'dropdown',
-					label: 'Bracket Section (Double Elimination)',
-					choices: [
-						{ id: 'no_change', label: 'No Change' },
-						{ id: 'cycle', label: 'Cycle Next Section' },
-						{ id: 'all', label: 'All Sections' },
-						{ id: 'winners', label: 'Winners Bracket' },
-						{ id: 'losers', label: 'Losers Bracket' },
-						{ id: 'finals', label: 'Grand Finals' },
-					],
-					default: 'no_change',
-				},
-				{
-					id: 'glide',
-					type: 'dropdown',
-					label: 'Transitions',
-					choices: [
-						{ id: 'no_change', label: 'No Change' },
-						{ id: '1', label: 'Smooth Glide (0.85s)' },
-						{ id: '0', label: 'Instant Snap (No Transition)' },
-					],
-					default: 'no_change',
-				},
-				{
-					id: 'matchId',
-					type: 'dropdown',
-					label: 'Target Specific Match (optional)',
-					choices: tournamentMatchChoices(self),
-					default: '',
-				},
-			],
-			callback: async ({ options }) =>
-				run(() => {
-					const isPoll = options.target === 'poll'
-					const body = {}
-					if (options.focus && options.focus !== 'no_change') {
-						body.focus = options.focus
-					}
-					if (options.round && options.round !== 'no_change') {
-						body.round = options.round === 'custom' ? options.roundValue : options.round
-					}
-					if (options.bracket && options.bracket !== 'no_change') {
-						body.bracket = options.bracket
-					}
-					if (options.glide && options.glide !== 'no_change') {
-						body.glide = options.glide
-					}
-					if (options.matchId) {
-						body.matchId = options.matchId
-					}
-					return self.api.tournamentPost('/view', body, isPoll)
-				})(),
-		},
 		randomizer_restore: {
-			name: 'Randomizer: restore removed choices',
+			name: 'Randomizer: Restore removed choices',
 			description: 'Put every eliminated or taken-out choice back in the pool',
 			options: [
 				{
@@ -1510,6 +1394,278 @@ module.exports = function (self) {
 					(self.state.randomizerPresets && self.state.randomizerPresets[0] && self.state.randomizerPresets[0].id)
 				if (!presetId) return
 				await run(() => self.api.randomizerRestore(presetId))()
+			},
+		},
+		chat_bot_toggle: {
+			name: 'Chat Bot: Turn on, off or toggle',
+			description: 'Lasts until StreamPulse restarts; the Config setting decides the start-up state',
+			options: [
+				{
+					id: 'mode',
+					type: 'dropdown',
+					label: 'Mode',
+					default: 'toggle',
+					choices: [
+						{ id: 'toggle', label: 'Toggle' },
+						{ id: 'on', label: 'On' },
+						{ id: 'off', label: 'Off' },
+					],
+				},
+			],
+			callback: async (e) => {
+				try {
+					await self.api.chatEnabled(
+						e.options.mode === 'toggle' ? { action: 'toggle' } : { enabled: e.options.mode === 'on' },
+					)
+					self.poll()
+				} catch (err) {
+					self.log('error', err.message)
+				}
+			},
+		},
+		chat_send: {
+			name: 'Chat Bot: Send a chat message',
+			options: [{ id: 'text', type: 'textinput', label: 'Message', default: '', useVariables: true }],
+			callback: async (e) => {
+				try {
+					await self.api.chatSend(await self.parseVariablesInString(e.options.text))
+				} catch (err) {
+					self.log('error', err.message)
+				}
+			},
+		},
+		chat_run_command: {
+			name: 'Chat Bot: Run a command or trigger',
+			description:
+				'Executes a command or trigger (silent commands run background API/webhook actions without sending chat messages)',
+			options: [
+				{
+					id: 'command',
+					type: 'dropdown',
+					label: 'Command or trigger',
+					choices: chatCommandChoices(self),
+					default: chatCommandChoices(self)[0].id,
+				},
+				{
+					id: 'custom_command',
+					type: 'textinput',
+					label: 'Or custom command name (overrides dropdown if set)',
+					default: '',
+					useVariables: true,
+				},
+				{
+					id: 'arg',
+					type: 'textinput',
+					label: 'Argument / parameter (optional, e.g. target username)',
+					default: '',
+					useVariables: true,
+				},
+			],
+			callback: async (e) => {
+				try {
+					const custom = await self.parseVariablesInString(e.options.custom_command || '')
+					const cmd = (custom.trim() || e.options.command || '').trim().replace(/^!/, '')
+					if (!cmd) return
+					const arg = await self.parseVariablesInString(e.options.arg || '')
+					await self.api.chatRun(cmd, arg, 'StreamDeck')
+					self.poll()
+				} catch (err) {
+					self.log('error', err.message)
+				}
+			},
+		},
+		chat_quote: {
+			name: 'Chat Bot: Send a quote to chat',
+			description: 'Posts a quote to chat. Leave ID blank for a random quote or specify a quote ID number.',
+			options: [
+				{
+					id: 'id',
+					type: 'textinput',
+					label: 'Quote ID (optional, blank = random)',
+					default: '',
+					useVariables: true,
+				},
+			],
+			callback: async (e) => {
+				try {
+					const id = await self.parseVariablesInString(e.options.id || '')
+					await self.api.chatQuote(id.trim())
+					self.poll()
+				} catch (err) {
+					self.log('error', err.message)
+				}
+			},
+		},
+		variable_counter: {
+			name: 'Variables: Change a counter (increment, decrement, reset)',
+			description: 'Increment, decrement or reset a StreamPulse counter (created in the Chat Bot page)',
+			options: [
+				{ id: 'name', type: 'textinput', label: 'Counter name', default: '' },
+				{
+					id: 'action',
+					type: 'dropdown',
+					label: 'Action',
+					default: 'increment',
+					choices: [
+						{ id: 'increment', label: 'Increment' },
+						{ id: 'decrement', label: 'Decrement' },
+						{ id: 'reset', label: 'Reset' },
+					],
+				},
+				{ id: 'amount', type: 'number', label: 'Amount', default: 1, min: 1, max: 100000 },
+			],
+			callback: async (e) => {
+				try {
+					await self.api.variable(e.options.name, e.options.action, { amount: e.options.amount })
+				} catch (err) {
+					self.log('error', err.message)
+				}
+			},
+		},
+		variable_set: {
+			name: 'Variables: Set a value',
+			description: 'Set a StreamPulse variable or counter to a value (created if missing)',
+			options: [
+				{ id: 'name', type: 'textinput', label: 'Variable name', default: '' },
+				{ id: 'value', type: 'textinput', label: 'Value', default: '', useVariables: true },
+			],
+			callback: async (e) => {
+				try {
+					await self.api.variable(e.options.name, 'set', { value: await self.parseVariablesInString(e.options.value) })
+				} catch (err) {
+					self.log('error', err.message)
+				}
+			},
+		},
+		variable_roll: {
+			name: 'Variables: Roll list / topic',
+			description: 'Advance or randomize a StreamPulse list variable (e.g. topic list, challenge wheel)',
+			options: [{ id: 'name', type: 'textinput', label: 'List variable name', default: '' }],
+			callback: async (e) => run(() => self.api.variableRoll(e.options.name))(),
+		},
+		timer_control: {
+			name: 'Timer: Control (start, pause, resume, reset, add/subtract)',
+			options: [
+				{
+					id: 'timer',
+					type: 'dropdown',
+					label: 'Timer',
+					choices: timerChoices(self),
+					default: timerChoices(self)[0].id,
+				},
+				{
+					id: 'action',
+					type: 'dropdown',
+					label: 'Action',
+					choices: [
+						{ id: 'start', label: 'Start' },
+						{ id: 'pause', label: 'Pause' },
+						{ id: 'resume', label: 'Resume' },
+						{ id: 'reset', label: 'Reset' },
+						{ id: 'add_time', label: 'Add time' },
+						{ id: 'subtract_time', label: 'Subtract time' },
+						{ id: 'visibility', label: 'Toggle overlay visibility' },
+					],
+					default: 'start',
+				},
+				{
+					id: 'minutes',
+					type: 'number',
+					label: 'Minutes (add / subtract)',
+					default: 1,
+					min: 0,
+					max: 1440,
+					isVisibleExpression: `$(options:action) == 'add_time' || $(options:action) == 'subtract_time'`,
+				},
+				{
+					id: 'seconds',
+					type: 'number',
+					label: 'Seconds (add / subtract)',
+					default: 0,
+					min: 0,
+					max: 3600,
+					isVisibleExpression: `$(options:action) == 'add_time' || $(options:action) == 'subtract_time'`,
+				},
+			],
+			callback: async ({ options }) =>
+				run(() => {
+					const params = {}
+					if (options.action === 'add_time' || options.action === 'subtract_time') {
+						params.minutes = options.minutes
+						params.seconds = options.seconds
+					}
+					if (options.action === 'visibility') params.mode = 'toggle'
+					return self.api.timerControl(options.timer, options.action, params)
+				})(),
+		},
+		goal_action: {
+			name: 'Goal: Control (reset, enable, disable, toggle)',
+			options: [
+				{ id: 'goal', type: 'dropdown', label: 'Goal', choices: goalChoices(self), default: goalChoices(self)[0].id },
+				{
+					id: 'action',
+					type: 'dropdown',
+					label: 'Action',
+					choices: [
+						{ id: 'reset', label: 'Reset progress' },
+						{ id: 'toggle', label: 'Toggle enabled' },
+						{ id: 'enable', label: 'Enable' },
+						{ id: 'disable', label: 'Disable' },
+					],
+					default: 'reset',
+				},
+			],
+			callback: async ({ options }) => run(() => self.api.goalAction(options.goal, options.action))(),
+		},
+		mark_clip: {
+			name: 'Production: Mark clip candidate',
+			options: [],
+			callback: async () => run(() => self.api.markClip('companion-button'))(),
+		},
+		pin_last_highlight: {
+			name: 'Production: Pin last chat message as highlight',
+			options: [],
+			callback: async () => run(() => self.api.pinLastHighlight())(),
+		},
+		start_session: {
+			name: 'Session: Start a new session',
+			options: [],
+			callback: async () => run(() => self.api.startSession())(),
+		},
+		end_session: {
+			name: 'Session: End and archive session',
+			options: [],
+			callback: async () => run(() => self.api.endSession())(),
+		},
+		reset_session_data: {
+			name: 'Session: Reset chat data without archiving',
+			description: 'Clears active chat data without saving to session archives',
+			options: [],
+			callback: async () => run(() => self.api.resetSession())(),
+		},
+		restart_server: {
+			name: 'Server: Restart StreamPulse',
+			description: 'Restarts the StreamPulse process; the active session continues',
+			options: [],
+			callback: async () => {
+				try {
+					await self.api.restartServer()
+				} catch (err) {
+					self.log('error', err.message)
+				}
+			},
+		},
+		stop_server: {
+			name: 'Server: Stop StreamPulse',
+			description:
+				'Shuts StreamPulse down and archives the current session. Companion cannot start it again; use a shell script for that.',
+			options: [],
+			callback: async () => {
+				try {
+					await self.api.stopServer()
+				} catch (err) {
+					self.log('error', err.message)
+				}
 			},
 		},
 	})

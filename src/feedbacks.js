@@ -459,5 +459,49 @@ module.exports = async function (self) {
 				return curSection === options.section
 			},
 		},
+		tier_voting_active: {
+			name: 'Tier Maker: voting actively running',
+			type: 'boolean',
+			description: 'True while a tier list item vote is currently open for chat votes',
+			defaultStyle: { bgcolor: BLUE, color: WHITE },
+			options: [],
+			callback: () => {
+				const vote = self.state.tierList?.activeVote || self.state.status?.tierList?.activeVote
+				return Boolean(vote && (vote.status === 'ACTIVE' || !vote.status))
+			},
+		},
+		tier_vote_locked: {
+			name: 'Tier Maker: voting locked (ready to place)',
+			type: 'boolean',
+			description: 'True when voting is closed and locked awaiting Lock & Place',
+			defaultStyle: { bgcolor: AMBER, color: WHITE },
+			options: [],
+			callback: () => {
+				const vote = self.state.tierList?.activeVote || self.state.status?.tierList?.activeVote
+				return Boolean(vote && vote.status === 'LOCKED')
+			},
+		},
+		tier_consensus_tier: {
+			name: 'Tier Maker: consensus matches tier',
+			type: 'boolean',
+			description: 'True when the leading audience consensus matches a specific tier label (e.g. S)',
+			defaultStyle: { bgcolor: GREEN, color: WHITE },
+			options: [
+				{
+					id: 'tier',
+					type: 'textinput',
+					label: 'Tier label (e.g. S, A, B, C)',
+					default: 'S',
+				},
+			],
+			callback: ({ options }) => {
+				const vote = self.state.tierList?.activeVote || self.state.status?.tierList?.activeVote
+				const current = (vote?.consensus?.consensusTier?.label || '').trim().toLowerCase()
+				const target = String(options.tier || '')
+					.trim()
+					.toLowerCase()
+				return Boolean(current && target && current === target)
+			},
+		},
 	})
 }

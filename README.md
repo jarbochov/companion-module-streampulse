@@ -13,6 +13,10 @@ Load it in Companion as a developer module (point Companion's module dev path at
 
 **Versus Studio:** actions for scores, clock/race control (start, pause, reset, per-runner finish, None), swap sides, queue and Save Progress; variables `matchup_title`, `matchup_c1_score`, `matchup_c1_time`, `matchup_clock` and more; feedbacks for clock running and runner finished.
 
+**Tier Maker Studio:** actions to start votes on specific or next unranked items, freeze/lock voting without placing, lock & place consensus into tier, cancel votes, reset item placements, and load template presets; variables for `tier_voting`, `tier_vote_status`, `tier_item`, `tier_votes`, `tier_consensus`, `tier_agreement`, `tier_time`, `tier_title`; feedbacks for `tier_voting_active`, `tier_vote_locked`, and `tier_consensus_tier`; button presets for starting votes, locking votes, placing consensus, and cancelling votes.
+
+**Action Search Organization:** All actions feature clear category prefixes (`Alerts:`, `Overlay:`, `Tier Maker:`, `Polls:`, `Poll Tournament:`, `Versus:`, `Tournament:`, `Randomizer:`, `Chat Bot:`, `Variables:`, `Timer:`, `Goal:`, `Production:`, `Session:`, `Server:`) and contiguous grouping so related commands appear together when searching or scrolling in Companion.
+
 Runner finish, toggle, and reset actions address the selected runner explicitly, including runners 2–4. Existing button configurations do not need to change.
 
 **Poll Tournament library:** save the active bracket as a reusable template, save a progress checkpoint, load saved history/checkpoints, or create a fresh bracket from a template. Load/create buttons require an explicit confirmation option and a library ID; see `companion/HELP.md` for the ID workflow. Library data is fetched only when needed by an action, not added to background polling.

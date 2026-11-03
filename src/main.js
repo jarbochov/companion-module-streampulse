@@ -29,6 +29,8 @@ class ModuleInstance extends InstanceBase {
 			tournament: null,
 			pollTournament: null,
 			tournamentPresets: [],
+			tierList: null,
+			tierListPresets: [],
 		}
 		this.tick = 0
 		this.ws = null
@@ -230,6 +232,29 @@ class ModuleInstance extends InstanceBase {
 		} else if (msg.type === 'randomizer-state') {
 			// Resets, restores and manual removals from the Studio
 			this.refreshRandomizerPresets()
+		} else if (
+			msg.type === 'tier-list:update' ||
+			msg.type === 'tier-list:vote-start' ||
+			msg.type === 'tier-list:vote-update' ||
+			msg.type === 'tier-list:vote-locked' ||
+			msg.type === 'tier-list:vote-end' ||
+			msg.type === 'tier-list:vote-cancel'
+		) {
+			this.refreshTierList()
+		}
+	}
+
+	async refreshTierList() {
+		try {
+			const tl = await this.api.tierList()
+			if (tl) {
+				this.state.tierList = tl
+				this.state.tierListPresets = tl.presets || []
+				updateVariables(this)
+				this.checkFeedbacks('tier_voting_active', 'tier_vote_locked', 'tier_consensus_tier')
+			}
+		} catch {
+			/* next poll will retry */
 		}
 	}
 
@@ -321,6 +346,9 @@ class ModuleInstance extends InstanceBase {
 			this.state.randomizerPresets = (rand && rand.presets) || []
 			const randomizerButtons = await this.api.randomizerButtonPresets().catch(() => null)
 			this.state.randomizerButtonPresets = (randomizerButtons && randomizerButtons.presets) || []
+			const tl = await this.api.tierList().catch(() => null)
+			this.state.tierList = tl
+			this.state.tierListPresets = (tl && tl.presets) || []
 			const wanted = String(this.config.placeholders || '')
 				.split(',')
 				.map((k) => k.trim())
@@ -380,6 +408,8 @@ class ModuleInstance extends InstanceBase {
 				(this.state.pollPresets || []).map((p) => [p.id, p.title || p.name]),
 				(this.state.matchupPresets || []).map((p) => [p.id, p.name || p.title]),
 				(this.state.tournamentPresets || []).map((p) => [p.id, p.name || p.title]),
+				(this.state.tierListPresets || []).map((p) => [p.id, p.name || p.title]),
+				((this.state.tierList && this.state.tierList.items) || []).map((it) => [it.id, it.name, it.tierId]),
 				((this.state.tournament && this.state.tournament.matches) || []).map((m) => [
 					m.id,
 					m.entrant1 && typeof m.entrant1 === 'object' ? m.entrant1.name : m.entrant1,
@@ -413,6 +443,9 @@ class ModuleInstance extends InstanceBase {
 				'matchup_win_ready',
 				'tournament_active',
 				'tournament_win_ready',
+				'tier_voting_active',
+				'tier_vote_locked',
+				'tier_consensus_tier',
 			)
 		} catch (err) {
 			this.state.online = false

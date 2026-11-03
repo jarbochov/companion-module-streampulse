@@ -99,6 +99,14 @@ const STATIC_VARS = {
 	tournament_bracket: 'Tournament: live bracket section (all / winners / losers / finals)',
 	poll_tournament_focus: 'Poll Tournament: live camera focus mode active (1 or 0)',
 	poll_tournament_bracket: 'Poll Tournament: live bracket section (all / winners / losers / finals)',
+	tier_voting: 'Tier Maker: vote actively running (yes / no)',
+	tier_vote_status: 'Tier Maker: vote status (idle / active / locked)',
+	tier_item: 'Tier Maker: active item being ranked',
+	tier_votes: 'Tier Maker: total votes cast on active item',
+	tier_consensus: 'Tier Maker: winning tier label (e.g. S, A, B)',
+	tier_agreement: 'Tier Maker: consensus agreement percent (e.g. 75%)',
+	tier_time: 'Tier Maker: voting time remaining (seconds or open)',
+	tier_title: 'Tier Maker: list title',
 	goals_total: 'Goals configured',
 	goals_completed: 'Goals completed',
 	session_started: 'Session start time',
@@ -461,6 +469,22 @@ function updateVariables(self) {
 	values.tournament_bracket = vt?.viewSettings?.bracket || 'all'
 	values.poll_tournament_focus = pt?.viewSettings?.focus ? 1 : 0
 	values.poll_tournament_bracket = pt?.viewSettings?.bracket || 'all'
+
+	const tl = self.state.tierList || self.state.status?.tierList
+	const tlVote = tl?.activeVote
+	const tlVoting = Boolean(tlVote && tlVote.status !== 'ENDED')
+	values.tier_voting = yn(tlVoting)
+	values.tier_vote_status = tlVote ? (tlVote.status || 'active').toLowerCase() : 'idle'
+	values.tier_item = tlVote?.itemName || ''
+	values.tier_votes = String(tlVote?.consensus?.totalVotes ?? 0)
+	values.tier_consensus = tlVote?.consensus?.consensusTier?.label || ''
+	values.tier_agreement = tlVote?.consensus?.agreementPercent != null ? `${tlVote.consensus.agreementPercent}%` : ''
+	values.tier_time = !tlVote
+		? '0'
+		: !tlVote.endsAt
+			? 'open'
+			: String(Math.max(0, Math.round((tlVote.endsAt - Date.now()) / 1000)))
+	values.tier_title = tl?.title || ''
 
 	// Timers and goals can be added or removed at runtime
 	const keys = Object.keys(values).sort().join(',')
