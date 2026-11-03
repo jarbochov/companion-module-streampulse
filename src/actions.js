@@ -159,6 +159,21 @@ module.exports = function (self) {
 				await run(() => self.api.alertMute(next))()
 			},
 		},
+		alert_fire: {
+			name: 'Alerts: Fire alert or announcement',
+			description: 'Fire a rule or announcement now, optionally overriding its text',
+			options: [
+				{
+					id: 'rule',
+					type: 'dropdown',
+					label: 'Rule / announcement',
+					choices: ruleChoices(self),
+					default: ruleChoices(self)[0].id,
+				},
+				{ id: 'message', type: 'textinput', label: 'Text override (optional)', default: '', useVariables: true },
+			],
+			callback: async ({ options }) => run(() => self.api.alertTrigger(options.rule, options.message))(),
+		},
 		alert_replay_last: {
 			name: 'Alerts: Replay last alert',
 			options: [],

@@ -124,6 +124,9 @@ class StreamPulseApi {
 		return this.request('/api/alerts/mute', { method: 'POST', body: { muted } })
 	}
 
+	alertTrigger(rule, message) {
+		return this.request('/api/alerts/trigger', { method: 'POST', body: { rule, message: message || undefined } })
+	}
 	alertTest(ruleId) {
 		return this.request('/api/alerts/test', { method: 'POST', body: { ruleId } })
 	}
