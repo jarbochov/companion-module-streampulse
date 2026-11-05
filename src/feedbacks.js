@@ -12,6 +12,15 @@ const RED = 0xcc0000
 const AMBER = 0xcc8800
 const BLUE = 0x1a73e8
 const WHITE = 0xffffff
+const { obsConnectionStatus } = require('./api')
+const {
+	PROFILE_FIELDS,
+	VISIBILITY_FIELDS,
+	speakerChoices,
+	findSpeaker,
+	speakerFieldValue,
+	speakerFieldVisible,
+} = require('./speakers')
 
 const {
 	overlayChoices,
@@ -24,6 +33,97 @@ const {
 
 module.exports = async function (self) {
 	self.setFeedbackDefinitions({
+		obs_connected: {
+			name: 'OBS: connected',
+			type: 'boolean',
+			defaultStyle: { bgcolor: GREEN, color: WHITE },
+			options: [],
+			callback: () => self.state.online !== false && !!self.state.status?.obs?.connected,
+		},
+		obs_connecting: {
+			name: 'OBS: connecting',
+			type: 'boolean',
+			defaultStyle: { bgcolor: AMBER, color: WHITE },
+			options: [],
+			callback: () => self.state.online !== false && !!self.state.status?.obs?.connecting,
+		},
+		obs_status: {
+			name: 'OBS: connection status',
+			type: 'boolean',
+			defaultStyle: { bgcolor: AMBER, color: WHITE },
+			options: [
+				{
+					id: 'status',
+					type: 'dropdown',
+					label: 'Status',
+					choices: ['connected', 'connecting', 'disconnected', 'disabled', 'error', 'unavailable'].map((status) => ({
+						id: status,
+						label: status[0].toUpperCase() + status.slice(1),
+					})),
+					default: 'connected',
+				},
+			],
+			callback: ({ options }) =>
+				obsConnectionStatus(self.state.online === false ? null : self.state.status?.obs) === options.status,
+		},
+		obs_scene_sync: {
+			name: 'OBS: Scene Sync enabled',
+			type: 'boolean',
+			description: 'Scene Sync is optional; speaker badges can use OBS audio without it.',
+			defaultStyle: { bgcolor: BLUE, color: WHITE },
+			options: [{ id: 'enabled', type: 'checkbox', label: 'Enabled', default: true }],
+			callback: ({ options }) => {
+				const obs = self.state.status?.obs
+				return self.state.online !== false && !!obs && obs.sceneSyncEnabled === options.enabled
+			},
+		},
+		speaker_visibility: {
+			name: 'Speaker Badge: detail visible / enabled',
+			type: 'boolean',
+			defaultStyle: { bgcolor: GREEN, color: WHITE },
+			options: [
+				{
+					id: 'speaker',
+					type: 'dropdown',
+					label: 'Speaker badge',
+					choices: speakerChoices(self),
+					default: speakerChoices(self)[0].id,
+				},
+				{ id: 'field', type: 'dropdown', label: 'Detail', choices: VISIBILITY_FIELDS, default: 'showAvatar' },
+			],
+			callback: ({ options }) => {
+				const entry = findSpeaker(self, options.speaker)
+				return (
+					!!entry &&
+					VISIBILITY_FIELDS.some((field) => field.id === options.field) &&
+					speakerFieldVisible(entry, options.field)
+				)
+			},
+		},
+		speaker_identity: {
+			name: 'Speaker Badge: profile field matches',
+			type: 'boolean',
+			defaultStyle: { bgcolor: BLUE, color: WHITE },
+			options: [
+				{
+					id: 'speaker',
+					type: 'dropdown',
+					label: 'Speaker badge',
+					choices: speakerChoices(self),
+					default: speakerChoices(self)[0].id,
+				},
+				{ id: 'field', type: 'dropdown', label: 'Profile field', choices: PROFILE_FIELDS, default: 'name' },
+				{ id: 'value', type: 'textinput', label: 'Exact value', default: '' },
+			],
+			callback: ({ options }) => {
+				const entry = findSpeaker(self, options.speaker)
+				return (
+					!!entry &&
+					PROFILE_FIELDS.some((field) => field.id === options.field) &&
+					String(speakerFieldValue(entry, options.field) ?? '') === String(options.value ?? '')
+				)
+			},
+		},
 		chat_command_used: {
 			name: 'Chat bot: command or trigger just used',
 			type: 'boolean',

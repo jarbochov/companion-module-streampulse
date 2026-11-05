@@ -5,37 +5,45 @@ const UpdateFeedbacks = require('./feedbacks')
 const UpdatePresets = require('./presets')
 const { defineVariables, updateVariables } = require('./variables')
 const { StreamPulseApi } = require('./api')
+const { collect, jobsFor, overlayPatch, choiceSignature } = require('./sync')
+
+function initialState() {
+	return {
+		online: false,
+		status: null,
+		timers: {},
+		goals: [],
+		rules: [],
+		alerts: null,
+		pages: {},
+		speakers: [],
+		overlayList: [],
+		slideshows: [],
+		videos: [],
+		cutouts: [],
+		musicOverlayVisible: true,
+		overlayVisibility: [],
+		poll: null,
+		pollPresets: [],
+		matchup: null,
+		matchupPresets: [],
+		tournament: null,
+		pollTournament: null,
+		tournamentPresets: [],
+		tierList: null,
+		tierListPresets: [],
+	}
+}
 
 class ModuleInstance extends InstanceBase {
 	constructor(internal) {
 		super(internal)
-		this.state = {
-			online: false,
-			status: null,
-			timers: {},
-			goals: [],
-			rules: [],
-			alerts: null,
-			pages: {},
-			slideshows: [],
-			videos: [],
-			cutouts: [],
-			musicOverlayVisible: true,
-			overlayVisibility: [],
-			poll: null,
-			pollPresets: [],
-			matchup: null,
-			matchupPresets: [],
-			tournament: null,
-			pollTournament: null,
-			tournamentPresets: [],
-			tierList: null,
-			tierListPresets: [],
-		}
-		this.tick = 0
+		this.state = initialState()
+		this.generation = 0
+		this.revisions = {}
+		this.pendingRefresh = new Set()
 		this.ws = null
 		this.wsConnected = false
-		this.wsReconnectTimer = null
 	}
 
 	async init(config) {
@@ -43,6 +51,7 @@ class ModuleInstance extends InstanceBase {
 		this.updateActions()
 		this.updateFeedbacks()
 		this.updatePresets()
+		defineVariables(this)
 		defineVariables(this)
 		this.startPolling()
 		this.startWebSocket()
@@ -55,6 +64,7 @@ class ModuleInstance extends InstanceBase {
 	}
 
 	async configUpdated(config) {
+		this.stopWebSocket()
 		this.config = config
 		this.startPolling()
 		this.startWebSocket()
@@ -62,21 +72,8 @@ class ModuleInstance extends InstanceBase {
 
 	getConfigFields() {
 		return [
-			{
-				type: 'textinput',
-				id: 'host',
-				label: 'StreamPulse host',
-				width: 8,
-				default: 'localhost',
-			},
-			{
-				type: 'textinput',
-				id: 'port',
-				label: 'Port',
-				width: 4,
-				default: '3000',
-				regex: Regex.PORT,
-			},
+			{ type: 'textinput', id: 'host', label: 'StreamPulse host', width: 8, default: 'localhost' },
+			{ type: 'textinput', id: 'port', label: 'Port', width: 4, default: '3000', regex: Regex.PORT },
 			{
 				type: 'number',
 				id: 'pollMs',
@@ -98,363 +95,298 @@ class ModuleInstance extends InstanceBase {
 
 	startWebSocket() {
 		this.stopWebSocket()
-		if (this.destroyed) return
+		if (this.destroyed || typeof WebSocket === 'undefined') return
 		const host = (this.config.host || 'localhost').trim()
-		const port = this.config.port || '3000'
-		const url = `ws://${host}:${port}/`
-
+		const url = `ws://${host}:${this.config.port || '3000'}/`
+		const generation = this.generation
 		try {
-			if (typeof WebSocket === 'undefined') return
-			this.ws = new WebSocket(url)
-			this.ws.onopen = () => {
+			const socket = new WebSocket(url)
+			this.ws = socket
+			const current = () => !this.destroyed && this.generation === generation && this.ws === socket
+			socket.onopen = () => {
+				if (!current()) return
 				this.wsConnected = true
 				this.log('debug', `Connected to StreamPulse WebSocket (${url})`)
-				// Refresh immediately on connection to sync state
-				this.poll()
+				this.poll({ discovery: false })
 			}
-			this.ws.onmessage = (event) => {
+			socket.onmessage = (event) => {
+				if (!current()) return
 				try {
-					const msg = JSON.parse(event.data)
-					this.handleWebSocketMessage(msg)
+					this.handleWebSocketMessage(JSON.parse(event.data))
 				} catch {
-					/* ignore parse error */
+					/* ignore malformed messages */
 				}
 			}
-			this.ws.onerror = () => {
-				/* handled by onclose */
-			}
-			this.ws.onclose = () => {
+			socket.onerror = () => {}
+			socket.onclose = () => {
+				if (!current()) return
 				this.wsConnected = false
 				this.ws = null
-				if (!this.destroyed) {
-					this.wsReconnectTimer = setTimeout(() => this.startWebSocket(), 5000)
-				}
+				this.wsReconnectTimer = setTimeout(() => this.startWebSocket(), 5000)
 			}
 		} catch {
 			this.wsConnected = false
-			this.ws = null
-			if (!this.destroyed) {
+			if (!this.destroyed && this.generation === generation) {
 				this.wsReconnectTimer = setTimeout(() => this.startWebSocket(), 5000)
 			}
 		}
 	}
 
 	stopWebSocket() {
-		if (this.wsReconnectTimer) clearTimeout(this.wsReconnectTimer)
+		clearTimeout(this.wsReconnectTimer)
 		this.wsReconnectTimer = null
-		if (this.ws) {
-			try {
-				this.ws.close()
-			} catch {}
-			this.ws = null
-		}
+		const socket = this.ws
+		this.ws = null
 		this.wsConnected = false
+		if (socket) {
+			socket.onopen = socket.onmessage = socket.onerror = socket.onclose = null
+			try {
+				socket.close()
+			} catch {}
+		}
+	}
+
+	applyPatch(patch, revisions = null) {
+		for (const [key, value] of Object.entries(patch)) {
+			if (revisions && revisions[key] !== this.revisions[key]) continue
+			this.state[key] = value
+			this.revisions[key] = (this.revisions[key] || 0) + 1
+		}
+		if ('chatActivity' in patch && this.state.chatActivity) {
+			const chat = this.state.chatActivity
+			this.state.chatEnabled = chat.enabled
+			this.state.chatHits ||= {}
+			const fresh = (chat.activity || []).filter((a) => a.seq > (this.state.chatSeq ?? chat.seq))
+			this.state.chatSeq = chat.seq
+			for (const activity of fresh) {
+				this.state.chatHits[activity.name.toLowerCase()] = Date.now()
+				this.state.chatLast = activity
+			}
+			if (fresh.length) {
+				clearTimeout(this.chatFeedbackTimer)
+				this.chatFeedbackTimer = setTimeout(() => this.checkFeedbacks('chat_command_used'), 10100)
+			}
+		}
+		const sig = choiceSignature(this.state)
+		if (sig !== this.choiceSig) {
+			this.choiceSig = sig
+			this.updateActions()
+			this.updateFeedbacks()
+			this.updatePresets()
+		}
+		updateVariables(this)
+		this.checkFeedbacks()
 	}
 
 	handleWebSocketMessage(msg) {
-		if (!msg || typeof msg !== 'object') return
-		if (msg.type === 'timer-update' && msg.timer) {
-			const t = msg.timer
-			this.state.timers[t.id] = t
-			updateVariables(this)
-			this.checkFeedbacks('timer_state')
-		} else if (msg.type === 'alert') {
-			if (this.state.alerts) this.state.alerts.pending = (this.state.alerts.pending || 0) + 1
-			updateVariables(this)
-			this.checkFeedbacks('alert_queue_paused')
-		} else if (msg.type === 'alert-skip' || msg.type === 'alert-clear') {
-			if (this.state.alerts) this.state.alerts.pending = Math.max(0, (this.state.alerts.pending || 1) - 1)
-			updateVariables(this)
-			this.checkFeedbacks('alert_queue_paused')
-		} else if (
-			msg.type === 'custom-overlay-page' ||
-			msg.type === 'custom-overlay-update' ||
-			msg.type === 'custom-overlay-video' ||
-			msg.type === 'custom-overlay-cutout'
-		) {
-			this.poll()
-		} else if (msg.type === 'poll-update') {
-			this.state.poll = msg.data
-			if (this.state.status) this.state.status.poll = msg.data
-			updateVariables(this)
-			this.checkFeedbacks('poll_active')
-		} else if (msg.type === 'matchup-update') {
-			this.state.matchup = msg.data || msg.matchup || null
-			updateVariables(this)
-			this.checkFeedbacks('matchup_clock_running', 'matchup_runner_finished', 'matchup_win_ready')
-		} else if (msg.type === 'tournament-update') {
-			this.state.tournament = msg.data || msg.tournament || null
-			updateVariables(this)
-			this.checkFeedbacks(
-				'tournament_active',
-				'tournament_win_ready',
-				'tournament_focus_active',
-				'tournament_bracket_section',
-			)
-		} else if (msg.type === 'poll-tournament-update') {
-			this.state.pollTournament = msg.data || msg.tournament || null
-			updateVariables(this)
-			this.checkFeedbacks(
-				'tournament_active',
-				'tournament_win_ready',
-				'tournament_focus_active',
-				'tournament_bracket_section',
-			)
-		} else if (msg.type === 'tournament-view') {
-			if (this.state.tournament) {
-				this.state.tournament.viewSettings = { ...(this.state.tournament.viewSettings || {}), ...(msg.data || {}) }
-			}
-			updateVariables(this)
-			this.checkFeedbacks('tournament_focus_active', 'tournament_bracket_section')
-		} else if (msg.type === 'poll-tournament-view') {
-			if (this.state.pollTournament) {
-				this.state.pollTournament.viewSettings = {
-					...(this.state.pollTournament.viewSettings || {}),
-					...(msg.data || {}),
+		if (this.destroyed || !msg || typeof msg.type !== 'string') return
+		const data = msg.data ?? msg
+		if (msg.type === 'timer-update' && data.timer?.id) {
+			this.applyPatch({ timers: { ...this.state.timers, [data.timer.id]: data.timer } })
+		} else if (msg.type === 'timers-snapshot' && data.timers) {
+			this.applyPatch({ timers: data.timers })
+		} else if (msg.type === 'goals-update' && data.items) {
+			this.applyPatch({ goals: data.items })
+		} else if (['alert', 'alert-skip', 'alert-clear'].includes(msg.type)) {
+			this.scheduleRefresh('alerts')
+		} else if (msg.type === 'custom-overlay-page' && data.id) {
+			const pages = { ...this.state.pages }
+			if (data.enabled === false) delete pages[data.id]
+			else
+				pages[data.id] = {
+					...data,
+					overlayName:
+						pages[data.id]?.overlayName ||
+						this.state.overlayList.find((overlay) => overlay.id === data.id)?.name ||
+						data.id,
 				}
+			this.applyPatch({
+				pages,
+			})
+		} else if (msg.type === 'custom-overlay-update' && data.id) {
+			const overlay = data.overlay
+			const overlayList = this.state.overlayList.filter((item) => item.id !== data.id)
+			const pages = { ...this.state.pages }
+			let speakers = this.state.speakers.filter((speaker) => speaker.overlayId !== data.id)
+			if (overlay) {
+				overlayList.push({
+					id: data.id,
+					name: overlay.name,
+					pageCount: overlay.pages?.enabled ? overlay.pages.items.length : 0,
+					hasControls: true,
+				})
+				speakers = speakers.concat(
+					(overlay.elements || [])
+						.filter((element) => element.type === 'speaker-badge')
+						.map((element) => ({
+							...element,
+							overlayId: data.id,
+							overlayName: overlay.name,
+							elementId: element.id,
+						})),
+				)
 			}
-			updateVariables(this)
-			this.checkFeedbacks('tournament_focus_active', 'tournament_bracket_section')
+			if (!overlay?.pages?.enabled) delete pages[data.id]
+			else if (pages[data.id]) pages[data.id] = { ...pages[data.id], overlayName: overlay.name }
+			this.applyPatch({ overlayList, speakers, pages })
+			this.scheduleRefresh('media')
+		} else if (['custom-overlay-video', 'custom-overlay-cutout', 'custom-overlay-slideshow'].includes(msg.type)) {
+			this.scheduleRefresh('media')
+		} else if (msg.type === 'overlay-visibility' && data.key) {
+			const entries = this.state.overlayVisibility
+			this.applyPatch({
+				overlayVisibility: entries.some((entry) => entry.key === data.key)
+					? entries.map((entry) => (entry.key === data.key ? { ...entry, visible: data.visible } : entry))
+					: [...entries, data],
+			})
+		} else if (['poll-update', 'matchup-update', 'tournament-update', 'poll-tournament-update'].includes(msg.type)) {
+			const key = {
+				'poll-update': 'poll',
+				'matchup-update': 'matchup',
+				'tournament-update': 'tournament',
+				'poll-tournament-update': 'pollTournament',
+			}[msg.type]
+			const value = msg.data ?? msg.matchup ?? msg.tournament ?? null
+			this.applyPatch({
+				[key]: value,
+				...(key === 'poll' && this.state.status ? { status: { ...this.state.status, poll: value } } : {}),
+			})
+		} else if (msg.type === 'tournament-view' || msg.type === 'poll-tournament-view') {
+			const key = msg.type === 'tournament-view' ? 'tournament' : 'pollTournament'
+			if (this.state[key]) {
+				this.applyPatch({ [key]: { ...this.state[key], viewSettings: { ...this.state[key].viewSettings, ...data } } })
+			}
 		} else if (msg.type === 'randomizer-spin') {
-			const d = msg.data || msg.payload || msg
-			this.state.randomizerLast = d
-			this.state.randomizerSpinning = true
-			this.checkFeedbacks('randomizer_spinning')
-			updateVariables(this)
-			const dur = Math.max(3, Number(d.duration) || 6)
-			if (this.randomizerSpinTimer) clearTimeout(this.randomizerSpinTimer)
-			this.randomizerSpinTimer = setTimeout(() => {
-				this.state.randomizerSpinning = false
-				this.checkFeedbacks('randomizer_spinning')
-				updateVariables(this)
-				this.refreshRandomizerPresets()
-			}, dur * 1000)
+			this.applyPatch({ randomizerLast: data, randomizerSpinning: true })
+			clearTimeout(this.randomizerSpinTimer)
+			this.randomizerSpinTimer = setTimeout(
+				() => {
+					this.applyPatch({ randomizerSpinning: false })
+					this.refreshRandomizerPresets()
+				},
+				Math.max(3, Number(data.duration) || 6) * 1000,
+			)
 		} else if (msg.type === 'randomizer-state') {
-			// Resets, restores and manual removals from the Studio
 			this.refreshRandomizerPresets()
-		} else if (
-			msg.type === 'tier-list:update' ||
-			msg.type === 'tier-list:vote-start' ||
-			msg.type === 'tier-list:vote-update' ||
-			msg.type === 'tier-list:vote-locked' ||
-			msg.type === 'tier-list:vote-end' ||
-			msg.type === 'tier-list:vote-cancel'
-		) {
+		} else if (msg.type.startsWith('tier-list:')) {
 			this.refreshTierList()
 		}
 	}
 
-	async refreshTierList() {
+	scheduleRefresh(group) {
+		const keys = {
+			alerts: ['alerts', 'rules'],
+			media: ['musicOverlayVisible', 'overlayVisibility', 'slideshows', 'videos', 'cutouts'],
+			tier: ['tierList', 'tierListPresets'],
+			randomizer: ['randomizerPresets'],
+		}
+		for (const key of keys[group] || []) this.revisions[key] = (this.revisions[key] || 0) + 1
+		this.pendingRefresh.add(group)
+		if (this.refreshTimer || this.refreshRunning || this.destroyed) return
+		this.refreshTimer = setTimeout(() => {
+			this.refreshTimer = null
+			this.flushRefresh()
+		}, 100)
+	}
+
+	async flushRefresh() {
+		if (this.destroyed || this.refreshRunning || !this.pendingRefresh.size) return
+		const generation = this.generation
+		const groups = [...this.pendingRefresh]
+		this.pendingRefresh.clear()
+		this.refreshRunning = true
+		const revisions = { ...this.revisions }
 		try {
-			const tl = await this.api.tierList()
-			if (tl) {
-				this.state.tierList = tl
-				this.state.tierListPresets = tl.presets || []
-				updateVariables(this)
-				this.checkFeedbacks('tier_voting_active', 'tier_vote_locked', 'tier_consensus_tier')
+			const patch = await collect(jobsFor(this.api, groups))
+			if (!this.destroyed && generation === this.generation) this.applyPatch(patch, revisions)
+		} finally {
+			if (generation === this.generation) {
+				this.refreshRunning = false
+				if (this.pendingRefresh.size) this.scheduleRefresh([...this.pendingRefresh][0])
 			}
-		} catch {
-			/* next poll will retry */
 		}
 	}
 
-	async refreshRandomizerPresets() {
-		try {
-			const rand = await this.api.randomizerPresets()
-			this.state.randomizerPresets = (rand && rand.presets) || []
-			updateVariables(this)
-		} catch {
-			/* next poll will retry */
-		}
+	refreshTierList() {
+		this.scheduleRefresh('tier')
+	}
+
+	refreshRandomizerPresets() {
+		this.scheduleRefresh('randomizer')
 	}
 
 	startPolling() {
 		this.stopPolling()
 		const host = (this.config.host || 'localhost').trim()
-		const port = this.config.port || '3000'
-		this.api = new StreamPulseApi(host, port)
+		this.api = new StreamPulseApi(host, this.config.port || '3000')
+		this.lastDiscovery = 0
+		this.lastPoll = 0
+		this.state = initialState()
+		this.applyPatch({
+			wantedPlaceholders: String(this.config.placeholders || '')
+				.split(',')
+				.map((key) => key.trim())
+				.filter(Boolean),
+		})
 		this.updateStatus(InstanceStatus.Connecting)
-		this.tick = 0
 		this.poll()
-		// If WS is connected, poll less frequently as a background heartbeat; otherwise poll normally
 		const interval = Math.max(500, Number(this.config.pollMs) || 1500)
 		this.pollTimer = setInterval(() => {
-			// When WebSocket is active, we only need a slow background sync
-			if (this.wsConnected && this.tick % 5 !== 0) {
-				this.tick++
-				return
-			}
-			this.poll()
+			if (Date.now() - this.lastPoll >= interval * (this.wsConnected ? 5 : 1)) this.poll({ discovery: false })
 		}, interval)
 	}
 
 	stopPolling() {
-		if (this.pollTimer) clearInterval(this.pollTimer)
-		this.pollTimer = null
-		if (this.randomizerSpinTimer) clearTimeout(this.randomizerSpinTimer)
-		this.randomizerSpinTimer = null
+		this.generation++
+		for (const timer of ['pollTimer', 'randomizerSpinTimer', 'chatFeedbackTimer', 'refreshTimer']) {
+			clearTimeout(this[timer])
+			this[timer] = null
+		}
+		this.pendingRefresh.clear()
+		this.polling = false
+		this.pollAgain = false
+		this.refreshRunning = false
 	}
 
-	async poll() {
-		if (this.polling) return
+	async poll({ discovery = true } = {}) {
+		if (this.destroyed) return
+		if (this.polling) {
+			this.pollAgain ||= discovery
+			return
+		}
 		this.polling = true
+		this.lastPoll = Date.now()
+		const generation = this.generation
+		const api = this.api
+		const revisions = { ...this.revisions }
+		const discover = discovery || !this.lastDiscovery || Date.now() - this.lastDiscovery >= 30000
 		try {
-			// Alerts and overlays payloads are larger, so refresh them less often
-			const withAlerts = this.tick++ % 3 === 0
-			const [status, timers, goals, alerts] = await Promise.all([
-				this.api.status(),
-				this.api.timers(),
-				this.api.goals(),
-				withAlerts ? this.api.alerts() : Promise.resolve(null),
-			])
-			if (withAlerts) this.overlayList = await this.api.overlays()
-			const paged = (this.overlayList || []).filter((o) => o.pageCount > 1)
-			const snaps = await Promise.all(paged.map((o) => this.api.overlayPage(o.id).catch(() => null)))
-			const pages = {}
-			paged.forEach((o, i) => {
-				if (snaps[i]) pages[o.id] = { ...snaps[i], overlayName: o.name }
-			})
-			this.state.pages = pages
-			const overlay = await this.api.musicOverlay().catch(() => null)
-			if (overlay) this.state.musicOverlayVisible = overlay.visible !== false
-			const vis = await this.api.overlayVisibility().catch(() => null)
-			if (vis && vis.overlays) this.state.overlayVisibility = vis.overlays
-			const shows = await this.api.slideshows().catch(() => null)
-			this.state.slideshows = (shows && shows.slideshows) || []
-			const vids = await this.api.videos().catch(() => null)
-			this.state.videos = (vids && vids.videos) || []
-			const cuts = await this.api.cutouts().catch(() => null)
-			this.state.cutouts = (cuts && cuts.cutouts) || []
-			// Optional extras: a failure here shouldn't mark the whole module as disconnected
-			this.state.gamePlan = await this.api.gamePlan().catch(() => null)
-			this.state.weather = await this.api.weather().catch(() => null)
-			const mu = await this.api.matchup().catch(() => null)
-			this.state.matchup = (mu && mu.matchup) || null
-			const muPresets = await this.api.matchupPresets().catch(() => null)
-			this.state.matchupPresets = (muPresets && muPresets.presets) || []
-			const activePoll = await this.api.pollActive().catch(() => null)
-			if (activePoll && 'poll' in activePoll) this.state.poll = activePoll.poll
-			const pollPresets = await this.api.pollPresets().catch(() => null)
-			this.state.pollPresets = (pollPresets && pollPresets.presets) || []
-			const tour = await this.api.tournament(false).catch(() => null)
-			this.state.tournament = (tour && tour.tournament) || null
-			const pollTour = await this.api.tournament(true).catch(() => null)
-			this.state.pollTournament = (pollTour && pollTour.tournament) || null
-			const tourPresets = await this.api.tournamentPresets(false).catch(() => null)
-			this.state.tournamentPresets = (tourPresets && tourPresets.presets) || []
-			const rand = await this.api.randomizerPresets().catch(() => null)
-			this.state.randomizerPresets = (rand && rand.presets) || []
-			const randomizerButtons = await this.api.randomizerButtonPresets().catch(() => null)
-			this.state.randomizerButtonPresets = (randomizerButtons && randomizerButtons.presets) || []
-			const tl = await this.api.tierList().catch(() => null)
-			this.state.tierList = tl
-			this.state.tierListPresets = (tl && tl.presets) || []
-			const wanted = String(this.config.placeholders || '')
-				.split(',')
-				.map((k) => k.trim())
-				.filter(Boolean)
-			this.state.placeholders = wanted.length ? await this.api.placeholders().catch(() => ({})) : {}
-			this.state.wantedPlaceholders = wanted
-			const bot = await this.api.chatbot().catch(() => null)
-			if (bot) {
-				const opts = [
-					...(bot.commands || []).map((c) => ({ id: c.name, label: `Command: ${bot.settings.prefix}${c.name}` })),
-					...(bot.triggers || []).map((t) => ({ id: t.name || t.id, label: `Trigger: ${t.name || t.id}` })),
-					...(bot.messages || []).map((m) => ({ id: m.name || m.id, label: `Timed: ${m.name || m.id}` })),
-					...['quote', 'addquote', 'delquote'].map((n) => ({ id: n, label: `Command: ${bot.settings.prefix}${n}` })),
-				]
-				this.state.chatChoices = opts
-			}
-			const chat = await this.api.chatActivity().catch(() => null)
-			if (chat) {
-				const s = this.state
-				s.chatEnabled = chat.enabled
-				s.chatHits = s.chatHits || {}
-				const fresh = chat.activity.filter((a) => a.seq > (s.chatSeq === undefined ? chat.seq : s.chatSeq))
-				s.chatSeq = chat.seq
-				for (const a of fresh) {
-					s.chatHits[a.name.toLowerCase()] = Date.now()
-					s.chatLast = a
-				}
-				if (fresh.length) {
-					this.checkFeedbacks('chat_command_used')
-					setTimeout(() => this.checkFeedbacks('chat_command_used'), 10100)
-				}
-				this.checkFeedbacks('chat_bot_on')
-			}
-			this.state.status = status
-			this.state.timers = (timers && timers.timers) || {}
-			this.state.goals = (goals && goals.items) || []
-			if (alerts) {
-				this.state.alerts = alerts.queue || null
-				this.state.rules = alerts.rules || []
-			}
-			this.state.online = true
-			this.updateStatus(InstanceStatus.Ok)
-
-			// Dropdown choices depend on live data, so rebuild them when ids or names change
-			const sig = JSON.stringify([
-				Object.values(this.state.timers).map((t) => [t.id, t.label]),
-				this.state.goals.map((g) => [g.id, g.title]),
-				this.state.rules.map((r) => [r.id, r.name]),
-				this.state.slideshows.map((s) => [s.overlayId, s.elementId, s.name]),
-				(this.state.videos || []).map((v) => [v.overlayId, v.elementId, v.name]),
-				(this.state.cutouts || []).map((c) => [c.overlayId, c.elementId, c.name]),
-				this.state.overlayVisibility.map((o) => [o.key, o.label]),
-				(this.state.chatChoices || []).map((c) => c.id),
-				Object.values(this.state.pages).map((p) => [p.id, p.overlayName, p.pages.map((x) => [x.id, x.name])]),
-				(this.state.randomizerPresets || []).map((p) => [p.id, p.name]),
-				(this.state.randomizerButtonPresets || []).map((p) => [p.id, p.name]),
-				(this.state.pollPresets || []).map((p) => [p.id, p.title || p.name]),
-				(this.state.matchupPresets || []).map((p) => [p.id, p.name || p.title]),
-				(this.state.tournamentPresets || []).map((p) => [p.id, p.name || p.title]),
-				(this.state.tierListPresets || []).map((p) => [p.id, p.name || p.title]),
-				((this.state.tierList && this.state.tierList.items) || []).map((it) => [it.id, it.name, it.tierId]),
-				((this.state.tournament && this.state.tournament.matches) || []).map((m) => [
-					m.id,
-					m.entrant1 && typeof m.entrant1 === 'object' ? m.entrant1.name : m.entrant1,
-					m.entrant2 && typeof m.entrant2 === 'object' ? m.entrant2.name : m.entrant2,
-					m.status,
-				]),
-			])
-			if (sig !== this.choiceSig) {
-				this.choiceSig = sig
-				this.updateActions()
-				this.updateFeedbacks()
-				this.updatePresets()
-			}
-			updateVariables(this)
-			this.checkFeedbacks(
-				'server_online',
-				'session_live',
-				'session_phase',
-				'timer_state',
-				'goal_complete',
-				'goal_enabled',
-				'alert_queue_paused',
-				'alerts_muted',
-				'music_playing',
-				'music_overlay_visible',
-				'overlay_shown',
-				'randomizer_spinning',
-				'poll_active',
-				'matchup_clock_running',
-				'matchup_runner_finished',
-				'matchup_win_ready',
-				'tournament_active',
-				'tournament_win_ready',
-				'tier_voting_active',
-				'tier_vote_locked',
-				'tier_consensus_tier',
+			const groups = ['core', 'alerts', 'media', 'live', 'tier']
+			if (discover) groups.push('discovery', 'randomizer')
+			const patch = await collect(jobsFor(api, groups, this.state.wantedPlaceholders))
+			if (this.destroyed || generation !== this.generation) return
+			const overlays = patch.overlayList || this.state.overlayList
+			Object.assign(
+				patch,
+				await overlayPatch(api, overlays, this.state.pages, this.state.speakers, { speakers: discover }),
 			)
-		} catch (err) {
-			this.state.online = false
-			this.state.status = null
+			if (this.destroyed || generation !== this.generation) return
+			this.applyPatch(patch, revisions)
+			if (discover && patch.overlayList) this.lastDiscovery = Date.now()
+			this.updateStatus(InstanceStatus.Ok)
+		} catch (error) {
+			if (this.destroyed || generation !== this.generation) return
+			this.applyPatch({ online: false, status: null })
 			this.setVariableValues({ streampulse_online: 'no', streampulse_uptime: '' })
-			this.checkFeedbacks('server_online')
-			this.updateStatus(InstanceStatus.ConnectionFailure, err.message)
+			this.updateStatus(InstanceStatus.ConnectionFailure, error.message)
 		} finally {
-			this.polling = false
+			if (generation === this.generation) {
+				this.polling = false
+				if (this.pollAgain) {
+					this.pollAgain = false
+					this.poll()
+				}
+			}
 		}
 	}
 

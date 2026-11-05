@@ -43,6 +43,15 @@ class StreamPulseApi {
 	overlays() {
 		return this.request('/api/custom-overlays')
 	}
+	speakers(overlayId) {
+		return this.request(`/api/custom-overlays/${encodeURIComponent(overlayId)}/speakers`)
+	}
+	updateSpeaker(overlayId, elementId, patch = {}) {
+		return this.request(`/api/custom-overlays/${encodeURIComponent(overlayId)}/speakers`, {
+			method: 'PATCH',
+			body: { ...patch, element: elementId },
+		})
+	}
 	overlayPage(id) {
 		return this.request(`/api/custom-overlays/${encodeURIComponent(id)}/page`)
 	}
@@ -161,9 +170,6 @@ class StreamPulseApi {
 			body,
 		})
 	}
-	startSession() {
-		return this.request('/api/start-session')
-	}
 	resetSession() {
 		return this.request('/api/reset')
 	}
@@ -259,4 +265,12 @@ class StreamPulseApi {
 	}
 }
 
-module.exports = { StreamPulseApi }
+const obsConnectionStatus = (obs) => {
+	if (!obs) return 'unavailable'
+	if (obs.enabled === false) return 'disabled'
+	if (obs.connected) return 'connected'
+	if (obs.connecting) return 'connecting'
+	return obs.lastError ? 'error' : 'disconnected'
+}
+
+module.exports = { StreamPulseApi, obsConnectionStatus }

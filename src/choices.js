@@ -16,39 +16,30 @@ const splitPage = (value) => {
 	return { overlay, page: rest.join('::') }
 }
 
-const slideshowChoices = (self) => {
-	const list = self.state.slideshows.map((s) => ({
-		id: `${s.overlayId}::${s.elementId}`,
-		label: `${s.overlayName} / ${s.name}`,
+const mediaChoices = (items, emptyLabel, name = (item) => item.name) => {
+	const list = items.map((item) => ({
+		id: `${item.overlayId}::${item.elementId}`,
+		label: `${item.overlayName} / ${name(item)}`,
 	}))
-	return list.length ? list : [{ id: '', label: '(no slideshows found)' }]
+	return list.length ? list : [{ id: '', label: emptyLabel }]
 }
+
+const slideshowChoices = (self) => mediaChoices(self.state.slideshows, '(no slideshows found)')
 
 const findSlideshow = (self, value) => {
 	const { overlay, page } = splitPage(value)
 	return self.state.slideshows.find((s) => s.overlayId === overlay && s.elementId === page)
 }
 
-const videoChoices = (self) => {
-	const list = (self.state.videos || []).map((v) => ({
-		id: `${v.overlayId}::${v.elementId}`,
-		label: `${v.overlayName} / ${v.name}`,
-	}))
-	return list.length ? list : [{ id: '', label: '(no videos found)' }]
-}
+const videoChoices = (self) => mediaChoices(self.state.videos || [], '(no videos found)')
 
 const findVideo = (self, value) => {
 	const { overlay, page } = splitPage(value)
 	return (self.state.videos || []).find((v) => v.overlayId === overlay && v.elementId === page)
 }
 
-const cutoutChoices = (self) => {
-	const list = (self.state.cutouts || []).map((c) => ({
-		id: `${c.overlayId}::${c.elementId}`,
-		label: `${c.overlayName} / ${c.name} (${c.shape})`,
-	}))
-	return list.length ? list : [{ id: '', label: '(no cutouts found)' }]
-}
+const cutoutChoices = (self) =>
+	mediaChoices(self.state.cutouts || [], '(no cutouts found)', (cutout) => `${cutout.name} (${cutout.shape})`)
 
 const findCutout = (self, value) => {
 	const { overlay, page } = splitPage(value)

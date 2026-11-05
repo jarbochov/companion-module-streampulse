@@ -1,3 +1,22 @@
+const { obsConnectionStatus } = require('./api')
+const { speakerVariablePrefix, speakerFieldValue, speakerFieldVisible } = require('./speakers')
+
+const SPEAKER_VARS = {
+	name: ['name', 'Name'],
+	handle: ['handle', 'Handle'],
+	pronouns: ['pronouns', 'Pronouns'],
+	avatar: ['avatarSrc', 'Avatar URL or media path'],
+	location: ['callIn.location', 'Call-in location'],
+	call_in_status: ['callIn.statusText', 'Call-in status label'],
+}
+const SPEAKER_VISIBILITY_VARS = {
+	show_avatar: ['showAvatar', 'Avatar visible'],
+	show_handle: ['showHandle', 'Handle visible'],
+	show_pronouns: ['showPronouns', 'Pronouns visible'],
+	call_in: ['callIn.enabled', 'Call-in mode enabled'],
+	show_location: ['callIn.showLocation', 'Call-in location visible'],
+}
+
 const slug = (id) =>
 	String(id)
 		.toLowerCase()
@@ -23,6 +42,13 @@ const STATIC_VARS = {
 	alerts_muted: 'Alert display muted (yes / no)',
 	ssn_connected: 'SocialStream connected (yes / no)',
 	twitch_connected: 'Twitch connected (yes / no)',
+	obs_connected: 'OBS WebSocket connected (yes / no)',
+	obs_connecting: 'OBS WebSocket connecting (yes / no)',
+	obs_status: 'OBS connection (connected / connecting / disconnected / disabled / error / unavailable)',
+	obs_scene_sync: 'OBS Scene Sync enabled (yes / no)',
+	obs_scene: 'OBS current program scene',
+	obs_last_error: 'OBS most recent connection error',
+	obs_active_engine: 'OBS Scene Sync active motion engine',
 	music_overlay: 'Music overlay (visible / hidden)',
 	viewers_average: 'Average viewers this session',
 	stream_uptime: 'Time since the stream went live (H:MM:SS)',
@@ -200,6 +226,14 @@ function defineVariables(self) {
 		defs[`slideshow_${s}_position`] = { name: `Slideshow ${sh.name}: slide (position/count)` }
 		defs[`slideshow_${s}_state`] = { name: `Slideshow ${sh.name}: state (playing / paused / offline)` }
 	}
+	for (const speaker of self.state.speakers || []) {
+		const prefix = speakerVariablePrefix(speaker)
+		const label = `Speaker ${speaker.overlayName || speaker.overlayId} / ${speaker.name || speaker.elementId}`
+		for (const [suffix, [, name]] of Object.entries({ ...SPEAKER_VARS, ...SPEAKER_VISIBILITY_VARS })) {
+			defs[`${prefix}_${suffix}`] = { name: `${label}: ${name}` }
+		}
+		defs[`${prefix}_audio_source`] = { name: `${label}: OBS audio input name` }
+	}
 	self.setVariableDefinitions(Object.entries(defs).map(([variableId, def]) => ({ variableId, name: def.name })))
 	self.variableKeys = Object.keys(defs).join(',')
 }
@@ -211,6 +245,24 @@ function updateVariables(self) {
 	values.streampulse_online = yn(self.state.online)
 	values.streampulse_uptime = st && Number.isFinite(st.uptime) ? hms(st.uptime * 1000) : ''
 	values.streampulse_started = (st && st.processStartedAt) || ''
+	const obs = self.state.online === false ? null : st?.obs
+	values.obs_connected = yn(obs?.connected)
+	values.obs_connecting = yn(obs?.connecting)
+	values.obs_status = obsConnectionStatus(obs)
+	values.obs_scene_sync = yn(obs?.sceneSyncEnabled)
+	values.obs_scene = obs?.currentProgramScene || ''
+	values.obs_last_error = obs?.lastError || ''
+	values.obs_active_engine = obs?.activeEngine || ''
+	for (const speaker of self.state.speakers || []) {
+		const prefix = speakerVariablePrefix(speaker)
+		for (const [suffix, [field]] of Object.entries(SPEAKER_VARS)) {
+			values[`${prefix}_${suffix}`] = speakerFieldValue(speaker, field) || ''
+		}
+		for (const [suffix, [field]] of Object.entries(SPEAKER_VISIBILITY_VARS)) {
+			values[`${prefix}_${suffix}`] = yn(speakerFieldVisible(speaker, field))
+		}
+		values[`${prefix}_audio_source`] = speaker.speakerBadge?.audio?.inputName || ''
+	}
 	if (st) {
 		values.session_phase = st.sessionPhase || ''
 		values.live = yn(st.viewers && st.viewers.live)
