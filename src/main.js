@@ -32,6 +32,8 @@ function initialState() {
 		tournamentPresets: [],
 		tierList: null,
 		tierListPresets: [],
+		trivia: null,
+		triviaPresets: [],
 	}
 }
 
@@ -270,6 +272,8 @@ class ModuleInstance extends InstanceBase {
 			this.refreshRandomizerPresets()
 		} else if (msg.type.startsWith('tier-list:')) {
 			this.refreshTierList()
+		} else if (msg.type.startsWith('trivia:')) {
+			this.refreshTrivia()
 		}
 	}
 
@@ -278,6 +282,7 @@ class ModuleInstance extends InstanceBase {
 			alerts: ['alerts', 'rules'],
 			media: ['musicOverlayVisible', 'overlayVisibility', 'slideshows', 'videos', 'cutouts'],
 			tier: ['tierList', 'tierListPresets'],
+			trivia: ['trivia', 'triviaPresets'],
 			randomizer: ['randomizerPresets'],
 		}
 		for (const key of keys[group] || []) this.revisions[key] = (this.revisions[key] || 0) + 1
@@ -309,6 +314,10 @@ class ModuleInstance extends InstanceBase {
 
 	refreshTierList() {
 		this.scheduleRefresh('tier')
+	}
+
+	refreshTrivia() {
+		this.scheduleRefresh('trivia')
 	}
 
 	refreshRandomizerPresets() {
@@ -361,7 +370,7 @@ class ModuleInstance extends InstanceBase {
 		const revisions = { ...this.revisions }
 		const discover = discovery || !this.lastDiscovery || Date.now() - this.lastDiscovery >= 30000
 		try {
-			const groups = ['core', 'alerts', 'media', 'live', 'tier']
+			const groups = ['core', 'alerts', 'media', 'live', 'tier', 'trivia']
 			if (discover) groups.push('discovery', 'randomizer')
 			const patch = await collect(jobsFor(api, groups, this.state.wantedPlaceholders))
 			if (this.destroyed || generation !== this.generation) return

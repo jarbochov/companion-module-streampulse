@@ -1,6 +1,7 @@
 const alertActions = require('./actions/alerts')
 const overlayActions = require('./actions/overlays')
 const tierListActions = require('./actions/tier-list')
+const triviaActions = require('./actions/trivia')
 const pollActions = require('./actions/polls')
 const matchupActions = require('./actions/matchup')
 const tournamentActions = require('./actions/tournaments')
@@ -34,5 +35,6 @@ module.exports = function (self) {
 		...timerGoalActions(self, run),
 		...productionActions(self, run),
 		...speakerActions(self),
+		...triviaActions(self, run),
 	})
 }

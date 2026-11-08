@@ -243,8 +243,14 @@ test('Domain assembly appends speaker and OBS definitions without replacing lega
 	]
 	defineActions(self)
 	definePresets(self)
-	const addedActions = Object.fromEntries(Object.entries(self.actions).slice(actionIds.length))
-	const addedPresets = Object.fromEntries(Object.entries(self.presets).slice(presetIds.length))
+	const speakerActionCount = Object.keys(speakerActions(self)).length
+	const addedActions = Object.fromEntries(
+		Object.entries(self.actions).slice(actionIds.length, actionIds.length + speakerActionCount),
+	)
+	const speakerPresetCount = Object.keys(speakerPresets(self)).length
+	const addedPresets = Object.fromEntries(
+		Object.entries(self.presets).slice(presetIds.length, presetIds.length + speakerPresetCount),
+	)
 	assert.deepEqual(Object.keys(addedActions), Object.keys(speakerActions(self)))
 	assert.deepEqual(Object.keys(addedPresets), Object.keys(speakerPresets(self)))
 	assert.equal(digest(addedActions), digest(speakerActions(self)))

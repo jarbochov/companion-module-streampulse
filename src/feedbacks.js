@@ -603,5 +603,41 @@ module.exports = async function (self) {
 				return Boolean(current && target && current === target)
 			},
 		},
+		trivia_phase: {
+			name: 'Trivia: phase status matches',
+			type: 'boolean',
+			description: 'True when trivia is in the specified phase (idle / question / reveal)',
+			defaultStyle: { bgcolor: BLUE, color: WHITE },
+			options: [
+				{
+					id: 'phase',
+					type: 'dropdown',
+					label: 'Phase',
+					choices: [
+						{ id: 'idle', label: 'Idle' },
+						{ id: 'question', label: 'Question active / voting open' },
+						{ id: 'reveal', label: 'Answer revealed / voting closed' },
+					],
+					default: 'question',
+				},
+			],
+			callback: ({ options }) => {
+				const tr = self.state.trivia || self.state.status?.trivia
+				const curPhase = tr?.phase || 'idle'
+				return curPhase === options.phase
+			},
+		},
+		trivia_unplayed_remaining: {
+			name: 'Trivia: unplayed questions remaining in bank',
+			type: 'boolean',
+			description: 'True when at least one question in the bank has not yet been marked (Done)',
+			defaultStyle: { bgcolor: GREEN, color: WHITE },
+			options: [],
+			callback: () => {
+				const tr = self.state.trivia || self.state.status?.trivia
+				const unplayed = tr?.unplayedCount ?? (tr?.questions ? tr.questions.filter((q) => !q.done).length : 0)
+				return unplayed > 0
+			},
+		},
 	})
 }

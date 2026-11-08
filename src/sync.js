@@ -65,6 +65,11 @@ function jobsFor(api, groups, wanted = []) {
 		const tierList = await api.tierList()
 		return { tierList, tierListPresets: tierList.presets || [] }
 	})
+	add('trivia', async () => {
+		const trivia = await api.trivia()
+		const presets = (await api.triviaPresets()).presets || []
+		return { trivia, triviaPresets: presets }
+	})
 	return jobs
 }
 
@@ -126,8 +131,10 @@ function choiceSignature(state) {
 			'matchupPresets',
 			'tournamentPresets',
 			'tierListPresets',
+			'triviaPresets',
 		].map((key) => (state[key] || []).map((p) => [p.id, p.name || p.title])),
 		(state.tierList?.items || []).map((item) => [item.id, item.name, item.tierId]),
+		(state.trivia?.questions || []).map((q) => [q.id, q.question, q.done]),
 		(state.tournament?.matches || []).map((m) => [
 			m.id,
 			typeof m.entrant1 === 'object' ? m.entrant1?.name : m.entrant1,

@@ -263,6 +263,39 @@ class StreamPulseApi {
 	tierListLoadPreset(presetId) {
 		return this.request(`/api/tier-list/presets/${encodeURIComponent(presetId)}/load`, { method: 'POST' })
 	}
+	trivia() {
+		return this.request('/api/trivia')
+	}
+	triviaPresets() {
+		return this.request('/api/trivia/presets')
+	}
+	triviaStart(body = {}) {
+		return this.request('/api/trivia/start', { method: 'POST', body })
+	}
+	triviaReveal() {
+		return this.request('/api/trivia/reveal', { method: 'POST' })
+	}
+	triviaNext() {
+		return this.request('/api/trivia/next', { method: 'POST' })
+	}
+	triviaPrev() {
+		return this.request('/api/trivia/prev', { method: 'POST' })
+	}
+	triviaReset() {
+		return this.request('/api/trivia/reset', { method: 'POST' })
+	}
+	triviaResetDone() {
+		return this.request('/api/trivia/questions/reset-done', { method: 'POST' })
+	}
+	triviaShuffle() {
+		return this.request('/api/trivia/questions/shuffle', { method: 'POST' })
+	}
+	triviaLoadPreset(presetId) {
+		return this.request(`/api/trivia/presets/${encodeURIComponent(presetId)}/load`, { method: 'POST' })
+	}
+	triviaVote(choice, user = 'StreamDeck') {
+		return this.request('/api/trivia/vote', { method: 'POST', body: { choice, user } })
+	}
 }
 
 const obsConnectionStatus = (obs) => {

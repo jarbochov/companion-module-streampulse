@@ -133,6 +133,17 @@ const STATIC_VARS = {
 	tier_agreement: 'Tier Maker: consensus agreement percent (e.g. 75%)',
 	tier_time: 'Tier Maker: voting time remaining (seconds or open)',
 	tier_title: 'Tier Maker: list title',
+	trivia_status: 'Trivia: phase status (idle / question / reveal)',
+	trivia_question: 'Trivia: active question text',
+	trivia_category: 'Trivia: active question category',
+	trivia_choice_count: 'Trivia: active question choice count (2-6)',
+	trivia_votes: 'Trivia: total votes cast on active question',
+	trivia_remaining: 'Trivia: countdown seconds remaining',
+	trivia_index: 'Trivia: current question 1-based index',
+	trivia_total: 'Trivia: total questions in active bank',
+	trivia_unplayed: 'Trivia: unplayed questions remaining in bank',
+	trivia_correct_answer: 'Trivia: correct answer text',
+	trivia_correct_letter: 'Trivia: correct answer letter',
 	goals_total: 'Goals configured',
 	goals_completed: 'Goals completed',
 	session_started: 'Session start time',
@@ -537,6 +548,21 @@ function updateVariables(self) {
 			? 'open'
 			: String(Math.max(0, Math.round((tlVote.endsAt - Date.now()) / 1000)))
 	values.tier_title = tl?.title || ''
+
+	const triviaState = self.state.trivia || self.state.status?.trivia
+	const triviaQ = triviaState?.currentQuestion
+	values.trivia_status = triviaState?.phase || 'idle'
+	values.trivia_question = triviaQ?.question || ''
+	values.trivia_category = triviaQ?.category || ''
+	values.trivia_choice_count = String(triviaQ?.choices?.length || 0)
+	values.trivia_votes = String(triviaState?.totalVotes ?? 0)
+	values.trivia_remaining = String(triviaState?.remainingSeconds ?? 0)
+	values.trivia_index = triviaState?.currentIndex != null && triviaState.currentIndex >= 0 ? String(triviaState.currentIndex + 1) : '0'
+	values.trivia_total = String(triviaState?.questions?.length || 0)
+	values.trivia_unplayed = String(triviaState?.unplayedCount ?? (triviaState?.questions ? triviaState.questions.filter((q) => !q.done).length : 0))
+	const correctChoice = triviaQ?.choices?.[triviaQ?.correctIndex]
+	values.trivia_correct_answer = correctChoice?.text || ''
+	values.trivia_correct_letter = correctChoice?.letter || (triviaQ?.correctIndex != null ? String.fromCharCode(65 + triviaQ.correctIndex) : '')
 
 	// Timers and goals can be added or removed at runtime
 	const keys = Object.keys(values).sort().join(',')
