@@ -550,19 +550,24 @@ function updateVariables(self) {
 	values.tier_title = tl?.title || ''
 
 	const triviaState = self.state.trivia || self.state.status?.trivia
-	const triviaQ = triviaState?.currentQuestion
-	values.trivia_status = triviaState?.phase || 'idle'
+	const triviaQ = triviaState?.activeQuestion
+	values.trivia_status = triviaState?.status || 'idle'
 	values.trivia_question = triviaQ?.question || ''
 	values.trivia_category = triviaQ?.category || ''
 	values.trivia_choice_count = String(triviaQ?.choices?.length || 0)
-	values.trivia_votes = String(triviaState?.totalVotes ?? 0)
-	values.trivia_remaining = String(triviaState?.remainingSeconds ?? 0)
-	values.trivia_index = triviaState?.currentIndex != null && triviaState.currentIndex >= 0 ? String(triviaState.currentIndex + 1) : '0'
-	values.trivia_total = String(triviaState?.questions?.length || 0)
-	values.trivia_unplayed = String(triviaState?.unplayedCount ?? (triviaState?.questions ? triviaState.questions.filter((q) => !q.done).length : 0))
-	const correctChoice = triviaQ?.choices?.[triviaQ?.correctIndex]
+	values.trivia_votes = String(triviaQ?.totalVotes ?? triviaState?.totalVotes ?? 0)
+	values.trivia_remaining = String(triviaQ?.remainingSeconds ?? triviaState?.remainingSeconds ?? 0)
+	values.trivia_index =
+		triviaState?.currentIndex != null && triviaState.currentIndex >= 0 ? String(triviaState.currentIndex + 1) : '0'
+	values.trivia_total = String(triviaState?.totalQuestions ?? triviaState?.questions?.length ?? 0)
+	values.trivia_unplayed = String(
+		triviaState?.unplayedCount ?? (triviaState?.questions ? triviaState.questions.filter((q) => !q.done).length : 0),
+	)
+	const correctIndex = triviaState?.status === 'reveal' ? triviaQ?.correctIndex : null
+	const correctChoice = correctIndex != null ? triviaQ?.choices?.[correctIndex] : null
 	values.trivia_correct_answer = correctChoice?.text || ''
-	values.trivia_correct_letter = correctChoice?.letter || (triviaQ?.correctIndex != null ? String.fromCharCode(65 + triviaQ.correctIndex) : '')
+	values.trivia_correct_letter =
+		correctChoice?.letter || (correctIndex != null ? String.fromCharCode(65 + correctIndex) : '')
 
 	// Timers and goals can be added or removed at runtime
 	const keys = Object.keys(values).sort().join(',')

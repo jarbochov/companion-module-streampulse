@@ -31,7 +31,7 @@ module.exports = function (self, run) {
 				{
 					id: 'duration',
 					type: 'number',
-					label: 'Timer duration in seconds (0 = keep current or open)',
+					label: 'Timer duration in seconds (0 = question default)',
 					default: 20,
 					min: 0,
 					max: 300,
@@ -40,7 +40,7 @@ module.exports = function (self, run) {
 			callback: async ({ options }) =>
 				run(() => {
 					const params = {}
-					if (options.question) params.questionId = options.question
+					if (options.question) params.id = options.question
 					if (options.duration !== undefined && Number(options.duration) > 0) {
 						params.duration = Number(options.duration)
 					}

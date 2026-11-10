@@ -623,7 +623,7 @@ module.exports = async function (self) {
 			],
 			callback: ({ options }) => {
 				const tr = self.state.trivia || self.state.status?.trivia
-				const curPhase = tr?.phase || 'idle'
+				const curPhase = tr?.status || 'idle'
 				return curPhase === options.phase
 			},
 		},

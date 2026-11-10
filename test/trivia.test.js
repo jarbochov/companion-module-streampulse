@@ -21,12 +21,13 @@ function createModuleMock() {
 			status: null,
 			alerts: null,
 			trivia: {
-				phase: 'question',
+				status: 'question',
 				currentIndex: 0,
-				totalVotes: 12,
-				remainingSeconds: 15,
+				totalQuestions: 3,
 				unplayedCount: 4,
-				currentQuestion: {
+				activeQuestion: {
+					totalVotes: 12,
+					remainingSeconds: 15,
 					id: 'q-1',
 					category: 'Gaming',
 					question: 'What company developed Super Mario Bros.?',
@@ -34,21 +35,22 @@ function createModuleMock() {
 						{ letter: 'A', text: 'Nintendo', percent: 85, votes: 10 },
 						{ letter: 'B', text: 'Sega', percent: 15, votes: 2 },
 					],
-					correctIndex: 0,
+					correctIndex: null,
 					done: false,
 				},
 				questions: [
 					{ id: 'q-1', question: 'What company developed Super Mario Bros.?', category: 'Gaming', done: false },
-					{ id: 'q-2', question: 'In what year was the NES released in North America?', category: 'History', done: true },
+					{
+						id: 'q-2',
+						question: 'In what year was the NES released in North America?',
+						category: 'History',
+						done: true,
+					},
 					{ id: 'q-3', question: 'Is Mario a plumber?', category: 'Trivia', done: false },
 				],
-				presets: [
-					{ id: 'preset-gaming', name: 'Gaming Pack' },
-				],
+				presets: [{ id: 'preset-gaming', name: 'Gaming Pack' }],
 			},
-			triviaPresets: [
-				{ id: 'preset-gaming', name: 'Gaming Pack' },
-			],
+			triviaPresets: [{ id: 'preset-gaming', name: 'Gaming Pack' }],
 		},
 		api: {
 			triviaStart: async (params) => {
@@ -115,7 +117,7 @@ test('Trivia: Companion actions invoke StreamPulse API endpoints', async () => {
 	const startAction = self.actions.trivia_start
 	assert.ok(startAction, 'trivia_start action must exist')
 	await startAction.callback({ options: { question: 'q-1', duration: 25 } })
-	assert.deepEqual(self.startCalled, { questionId: 'q-1', duration: 25 })
+	assert.deepEqual(self.startCalled, { id: 'q-1', duration: 25 })
 
 	// trivia_reveal
 	const revealAction = self.actions.trivia_reveal
@@ -187,14 +189,29 @@ test('Trivia: Feedbacks and Variables expose live state', async () => {
 	assert.equal(self.variableValues.trivia_index, '1')
 	assert.equal(self.variableValues.trivia_total, '3')
 	assert.equal(self.variableValues.trivia_unplayed, '4')
-	assert.equal(self.variableValues.trivia_correct_answer, 'Nintendo')
-	assert.equal(self.variableValues.trivia_correct_letter, 'A')
+	assert.equal(self.variableValues.trivia_correct_answer, '')
+	assert.equal(self.variableValues.trivia_correct_letter, '')
 
 	// Feedbacks check
 	assert.equal(self.feedbacks.trivia_phase.callback({ options: { phase: 'question' } }), true)
 	assert.equal(self.feedbacks.trivia_phase.callback({ options: { phase: 'reveal' } }), false)
 	assert.equal(self.feedbacks.trivia_phase.callback({ options: { phase: 'idle' } }), false)
 	assert.equal(self.feedbacks.trivia_unplayed_remaining.callback(), true)
+
+	self.state.trivia.status = 'reveal'
+	self.state.trivia.activeQuestion.correctIndex = 0
+	updateVariables(self)
+	assert.equal(self.variableValues.trivia_correct_answer, 'Nintendo')
+	assert.equal(self.variableValues.trivia_correct_letter, 'A')
+	assert.equal(self.feedbacks.trivia_phase.callback({ options: { phase: 'reveal' } }), true)
+
+	const fullState = self.state.trivia
+	self.state.status = { trivia: { ...fullState } }
+	delete self.state.status.trivia.questions
+	self.state.trivia = null
+	updateVariables(self)
+	assert.equal(self.variableValues.trivia_total, '3', 'status summaries expose totalQuestions without a bank')
+	self.state.trivia = fullState
 
 	// Simulate all done
 	self.state.trivia.unplayedCount = 0
