@@ -67,7 +67,7 @@ const STATIC_VARS = {
 	chat_hashtags: 'Hashtags used this session',
 	chat_raids: 'Raids this session',
 	chat_followers: 'New followers this session',
-	chat_subscribers: 'New subscribers this session',
+	chat_subscribers: 'Subscribers this session (new and returning)',
 	top_chatter: 'Top chatter this session',
 	top_chatter_messages: 'Top chatter message count',
 	last_chatter: 'Most recent chatter',

@@ -25,6 +25,8 @@ Trivia's saved Reveal Delay waits after the countdown reaches zero; voting close
 
 **OBS health:** connection, connecting, connection status, Scene Sync enablement, current program scene, active motion engine and last error variables, plus connection/Scene Sync feedbacks and status presets. These use the existing `/api/status` snapshot, not extra OBS polling. OBS audio works for speaker badges without enabling Scene Sync; high-frequency audio meters are not exposed as Companion variables.
 
+**Session subscribers:** `chat_subscribers` includes new and returning subscribers recorded by updated StreamPulse from native Twitch EventSub or SocialStream Ninja. No shared chat message is required for native notifications; nearby duplicate notifications share one count. The variable name is unchanged.
+
 **Action Search Organization:** All actions feature clear category prefixes (`Alerts:`, `Overlay:`, `Speaker Badge:`, `Tier Maker:`, `Polls:`, `Poll Tournament:`, `Versus:`, `Tournament:`, `Randomizer:`, `Chat Bot:`, `Variables:`, `Timer:`, `Goal:`, `Production:`, `Session:`, `Server:`) and contiguous grouping so related commands appear together when searching or scrolling in Companion.
 
 Runner finish, toggle, and reset actions address the selected runner explicitly, including runners 2–4. Existing button configurations do not need to change.
