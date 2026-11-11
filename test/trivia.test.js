@@ -68,6 +68,9 @@ function createModuleMock() {
 			triviaReset: async () => {
 				self.resetCalled = true
 			},
+			triviaClear: async () => {
+				self.clearCalled = true
+			},
 			triviaResetDone: async () => {
 				self.resetDoneCalled = true
 			},
@@ -118,6 +121,8 @@ test('Trivia: Companion actions invoke StreamPulse API endpoints', async () => {
 	assert.ok(startAction, 'trivia_start action must exist')
 	await startAction.callback({ options: { question: 'q-1', duration: 25 } })
 	assert.deepEqual(self.startCalled, { id: 'q-1', duration: 25 })
+	await startAction.callback({ options: { question: 'q-1', duration: 0 } })
+	assert.deepEqual(self.startCalled, { id: 'q-1' }, 'zero lets the saved studio default control the countdown')
 
 	// trivia_reveal
 	const revealAction = self.actions.trivia_reveal
@@ -136,6 +141,8 @@ test('Trivia: Companion actions invoke StreamPulse API endpoints', async () => {
 	assert.ok(prevAction, 'trivia_prev action must exist')
 	await prevAction.callback({ options: {} })
 	assert.equal(self.prevCalled, true)
+	await self.actions.trivia_clear.callback({ options: {} })
+	assert.equal(self.clearCalled, true)
 
 	// trivia_reset
 	const resetAction = self.actions.trivia_reset
@@ -171,6 +178,15 @@ test('Trivia: Companion actions invoke StreamPulse API endpoints', async () => {
 	assert.ok(voteAction, 'trivia_vote action must exist')
 	await voteAction.callback({ options: { choice: 'B' } })
 	assert.deepEqual(self.voted, { choice: 'B', user: 'StreamDeck' })
+})
+
+test('Trivia: clear action uses the non-resetting question endpoint', async () => {
+	const { StreamPulseApi } = require('../src/api')
+	const api = new StreamPulseApi('localhost', 3000)
+	const requests = []
+	api.request = async (path, options) => requests.push({ path, ...options })
+	await api.triviaClear()
+	assert.deepEqual(requests, [{ path: '/api/trivia/question/clear', method: 'POST' }])
 })
 
 test('Trivia: Feedbacks and Variables expose live state', async () => {

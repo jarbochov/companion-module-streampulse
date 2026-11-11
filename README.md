@@ -17,6 +17,10 @@ Load it in Companion as a developer module (point Companion's module dev path at
 
 **Trivia Studio:** start a selected question, reveal, navigate, reset played marks, shuffle, load packs, or vote. Phase feedback and question/vote/countdown variables follow the server's live state; correct-answer variables stay empty until reveal. Disabling Chat Voting in StreamPulse also silences automatic trivia announcements.
 
+Trivia's saved Reveal Delay waits after the countdown reaches zero; voting closes at zero while the phase remains `question` until reveal. Auto-Advance Delay separately holds the revealed answer. The Companion Reveal action always reveals immediately, bypassing a pending delay.
+
+**Clear Current Question** hides the overlay without resetting played marks. New Start actions and presets default to duration zero, inheriting the studio duration for every question; existing positive duration overrides remain explicit overrides. StreamPulse's **Randomize Choices** toggle shuffles live choices while preserving the correct answer; letter votes follow the displayed order.
+
 **Speaker Badges:** select a badge by overlay and layer; update its name, avatar URL/media-library path, handle, pronouns, call-in location or status label; select its OBS audio input by exact name; show, hide or toggle the avatar, handle, pronouns, call-in mode and location. Updates preserve other badge fields and styling. Per-badge identity/visibility variables and feedbacks accompany ready-to-use detail-toggle presets. Speaker discovery refreshes every 30 seconds; live overlay changes also arrive over WebSocket.
 
 **OBS health:** connection, connecting, connection status, Scene Sync enablement, current program scene, active motion engine and last error variables, plus connection/Scene Sync feedbacks and status presets. These use the existing `/api/status` snapshot, not extra OBS polling. OBS audio works for speaker badges without enabling Scene Sync; high-frequency audio meters are not exposed as Companion variables.

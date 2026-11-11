@@ -18,7 +18,7 @@ module.exports = function () {
 				down: [
 					{
 						actionId: 'trivia_start',
-						options: { question: '', duration: 20 },
+						options: { question: '', duration: 0 },
 					},
 				],
 				up: [],
@@ -118,6 +118,15 @@ module.exports = function () {
 				up: [],
 			},
 		],
+		feedbacks: [],
+	}
+
+	presets['trivia_clear'] = {
+		type: 'button',
+		category: 'Trivia',
+		name: 'Clear Current Question',
+		style: { text: 'TRIVIA\\nCLEAR', size: '14', color: WHITE, bgcolor: DARK_GRAY },
+		steps: [{ down: [{ actionId: 'trivia_clear', options: {} }], up: [] }],
 		feedbacks: [],
 	}
 

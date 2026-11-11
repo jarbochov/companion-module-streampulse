@@ -19,7 +19,8 @@ module.exports = function (self, run) {
 	return {
 		trivia_start: {
 			name: 'Trivia: Start / Show question',
-			description: 'Display a question, start countdown, and open chat voting',
+			description:
+				'Display a question and start countdown; saved Reveal Delay applies after zero and voting closes at zero',
 			options: [
 				{
 					id: 'question',
@@ -31,8 +32,8 @@ module.exports = function (self, run) {
 				{
 					id: 'duration',
 					type: 'number',
-					label: 'Timer duration in seconds (0 = question default)',
-					default: 20,
+					label: 'Timer duration in seconds (0 = studio default)',
+					default: 0,
 					min: 0,
 					max: 300,
 				},
@@ -49,7 +50,7 @@ module.exports = function (self, run) {
 		},
 		trivia_reveal: {
 			name: 'Trivia: Reveal correct answer',
-			description: 'Stop timer, close voting, and reveal the correct answer',
+			description: 'Stop timer, close voting, and reveal immediately, bypassing any pending Reveal Delay',
 			options: [],
 			callback: async () => run(() => self.api.triviaReveal())(),
 		},
@@ -64,6 +65,12 @@ module.exports = function (self, run) {
 			description: 'Return to the previous question in sequential order',
 			options: [],
 			callback: async () => run(() => self.api.triviaPrev())(),
+		},
+		trivia_clear: {
+			name: 'Trivia: Clear current question',
+			description: 'Hide the question and stop pending timers without resetting played questions',
+			options: [],
+			callback: async () => run(() => self.api.triviaClear())(),
 		},
 		trivia_reset: {
 			name: 'Trivia: Reset overlay to idle',
@@ -119,8 +126,8 @@ module.exports = function (self, run) {
 					type: 'dropdown',
 					label: 'Choice',
 					choices: [
-						{ id: 'A', label: 'A (Option 1 / True)' },
-						{ id: 'B', label: 'B (Option 2 / False)' },
+						{ id: 'A', label: 'A (Displayed option 1)' },
+						{ id: 'B', label: 'B (Displayed option 2)' },
 						{ id: 'C', label: 'C (Option 3)' },
 						{ id: 'D', label: 'D (Option 4)' },
 						{ id: 'E', label: 'E (Option 5)' },

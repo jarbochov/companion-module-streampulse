@@ -284,6 +284,9 @@ class StreamPulseApi {
 	triviaReset() {
 		return this.request('/api/trivia/reset', { method: 'POST' })
 	}
+	triviaClear() {
+		return this.request('/api/trivia/question/clear', { method: 'POST' })
+	}
 	triviaResetDone() {
 		return this.request('/api/trivia/questions/reset-done', { method: 'POST' })
 	}
