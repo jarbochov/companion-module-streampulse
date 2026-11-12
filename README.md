@@ -29,6 +29,8 @@ Trivia's saved Reveal Delay waits after the countdown reaches zero; voting close
 
 Stream title and category variables keep showing current Twitch channel metadata while offline. Session title/category history on updated StreamPulse is live-only, beginning once at the actual broadcast start.
 
+**Milestone estimates:** `milestone_stream_estimate_days`, `milestone_hours_estimate_days` and `milestone_chatters_estimate_days` show approximate days to the next goal based on recent pace. They are empty when there is no estimate.
+
 **Action Search Organization:** All actions feature clear category prefixes (`Alerts:`, `Overlay:`, `Speaker Badge:`, `Tier Maker:`, `Polls:`, `Poll Tournament:`, `Versus:`, `Tournament:`, `Randomizer:`, `Chat Bot:`, `Variables:`, `Timer:`, `Goal:`, `Production:`, `Session:`, `Server:`) and contiguous grouping so related commands appear together when searching or scrolling in Companion.
 
 Runner finish, toggle, and reset actions address the selected runner explicitly, including runners 2–4. Existing button configurations do not need to change.

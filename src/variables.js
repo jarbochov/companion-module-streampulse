@@ -188,6 +188,9 @@ const STATIC_VARS = {
 	milestone_lifetime_messages: 'Lifetime chat messages',
 	milestone_next_stream_goal: 'Next stream count goal',
 	milestone_next_hours_goal: 'Next broadcast hours goal',
+	milestone_stream_estimate_days: 'Estimated days to next stream milestone',
+	milestone_hours_estimate_days: 'Estimated days to next broadcast hours milestone',
+	milestone_chatters_estimate_days: 'Estimated days to next unique chatters milestone',
 	randomizer_last_winner: 'Randomizer: last winner selected',
 	randomizer_last_preset: 'Randomizer: last preset ID used',
 	randomizer_last_mode: 'Randomizer: last display mode (roller / wheel / deck)',
@@ -367,6 +370,11 @@ function updateVariables(self) {
 		values.milestone_lifetime_messages = ms.lifetime_messages || 0
 		values.milestone_next_stream_goal = ms.next_stream_goal || 0
 		values.milestone_next_hours_goal = ms.next_hours_goal || 0
+		for (const type of ['streams', 'hours', 'chatters']) {
+			const key = type === 'streams' ? 'stream' : type
+			const days = (ms.milestones || []).find((item) => item.type === type)?.pace?.days
+			values[`milestone_${key}_estimate_days`] = Number.isFinite(days) ? days : ''
+		}
 	}
 	const plan = (self.state.gamePlan && self.state.gamePlan.items) || []
 	values.plan_now = (plan.find((g) => g.playingNow) || {}).name || ''

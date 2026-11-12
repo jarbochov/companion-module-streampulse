@@ -36,6 +36,7 @@ function createModuleMock() {
 			layout: 'horizontal',
 		},
 	}
+
 	const self = {
 		state: {
 			online: true,
@@ -92,6 +93,26 @@ function createModuleMock() {
 	self.snapshot = { id: 'show-1', name: 'Interview', revision: 3, speakers: [structuredClone(entry)] }
 	return self
 }
+
+test('milestone estimate variables follow pace and clear when estimates are unavailable', () => {
+	const self = createModuleMock()
+	self.state.status.milestones = {
+		milestones: [
+			{ type: 'streams', pace: { days: 12 } },
+			{ type: 'hours', pace: { days: 30 } },
+			{ type: 'chatters', pace: null },
+		],
+	}
+	defineVariables(self)
+	updateVariables(self)
+	assert.ok(self.definitions.some((definition) => definition.variableId === 'milestone_stream_estimate_days'))
+	assert.equal(self.values.milestone_stream_estimate_days, 12)
+	assert.equal(self.values.milestone_hours_estimate_days, 30)
+	assert.equal(self.values.milestone_chatters_estimate_days, '')
+	self.state.status.milestones = {}
+	updateVariables(self)
+	assert.equal(self.values.milestone_stream_estimate_days, '')
+})
 
 test('speaker API methods encode overlay IDs and send minimal PATCH; startSession uses POST', async () => {
 	const api = new StreamPulseApi('localhost', 3000)
