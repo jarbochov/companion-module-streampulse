@@ -1,4 +1,4 @@
-const { obsConnectionStatus } = require('./api')
+const { obsConnectionStatus, communityInsightsStatus } = require('./api')
 const { speakerVariablePrefix, speakerFieldValue, speakerFieldVisible } = require('./speakers')
 
 const SPEAKER_VARS = {
@@ -41,6 +41,7 @@ const STATIC_VARS = {
 	alerts_paused: 'Alert queue paused (yes / no)',
 	alerts_muted: 'Alert display muted (yes / no)',
 	ssn_connected: 'SocialStream connected (yes / no)',
+	community_insights_status: 'Community insights (off / scanning / ready / error / unavailable)',
 	twitch_connected: 'Twitch connected (yes / no)',
 	obs_connected: 'OBS WebSocket connected (yes / no)',
 	obs_connecting: 'OBS WebSocket connecting (yes / no)',
@@ -259,6 +260,9 @@ function updateVariables(self) {
 	values.streampulse_online = yn(self.state.online)
 	values.streampulse_uptime = st && Number.isFinite(st.uptime) ? hms(st.uptime * 1000) : ''
 	values.streampulse_started = (st && st.processStartedAt) || ''
+	values.community_insights_status = communityInsightsStatus(
+		self.state.online === false ? null : self.state.communityInsights,
+	)
 	const obs = self.state.online === false ? null : st?.obs
 	values.obs_connected = yn(obs?.connected)
 	values.obs_connecting = yn(obs?.connecting)

@@ -204,6 +204,21 @@ test('discovery includes single-page overlays and speakers, while heartbeat avoi
 	}
 })
 
+test('Community indexing status refreshes during discovery and clears on endpoint failure', async () => {
+	const { instance, responses, calls } = harness()
+	responses.communityInsightsStatus = { enabled: true, phase: 'scanning' }
+	await instance.poll()
+	assert.equal(instance.state.communityInsights.phase, 'scanning')
+	calls.length = 0
+	await instance.poll({ discovery: false })
+	assert.equal(calls.includes('communityInsightsStatus'), false)
+	responses.communityInsightsStatus = () => {
+		throw new Error('Older server')
+	}
+	await instance.poll()
+	assert.equal(instance.state.communityInsights, null)
+})
+
 test('real definitions consume discovered speakers, OBS health and live timer snapshots together', async () => {
 	const { instance, responses } = harness({ definitions: true })
 	responses.status = { obs: { enabled: true, connected: true, sceneSyncEnabled: false } }

@@ -12,7 +12,7 @@ const RED = 0xcc0000
 const AMBER = 0xcc8800
 const BLUE = 0x1a73e8
 const WHITE = 0xffffff
-const { obsConnectionStatus } = require('./api')
+const { obsConnectionStatus, communityInsightsStatus } = require('./api')
 const {
 	PROFILE_FIELDS,
 	VISIBILITY_FIELDS,
@@ -33,6 +33,25 @@ const {
 
 module.exports = async function (self) {
 	self.setFeedbackDefinitions({
+		community_insights_status: {
+			name: 'Community: insights indexing status',
+			type: 'boolean',
+			defaultStyle: { bgcolor: BLUE, color: WHITE },
+			options: [
+				{
+					id: 'status',
+					type: 'dropdown',
+					label: 'Status',
+					choices: ['off', 'scanning', 'ready', 'error', 'unavailable'].map((status) => ({
+						id: status,
+						label: status[0].toUpperCase() + status.slice(1),
+					})),
+					default: 'ready',
+				},
+			],
+			callback: ({ options }) =>
+				communityInsightsStatus(self.state.online === false ? null : self.state.communityInsights) === options.status,
+		},
 		obs_connected: {
 			name: 'OBS: connected',
 			type: 'boolean',

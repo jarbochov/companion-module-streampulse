@@ -114,6 +114,25 @@ test('milestone estimate variables follow pace and clear when estimates are unav
 	assert.equal(self.values.milestone_stream_estimate_days, '')
 })
 
+test('Community status variable and feedback handle indexing, older servers and offline state', async () => {
+	const self = createModuleMock()
+	self.state.communityInsights = { enabled: true, phase: 'scanning' }
+	defineVariables(self)
+	updateVariables(self)
+	await defineFeedbacks(self)
+	assert.ok(self.definitions.some((definition) => definition.variableId === 'community_insights_status'))
+	assert.equal(self.values.community_insights_status, 'scanning')
+	assert.equal(self.feedbacks.community_insights_status.callback({ options: { status: 'scanning' } }), true)
+	self.state.communityInsights = null
+	updateVariables(self)
+	assert.equal(self.values.community_insights_status, 'unavailable')
+	self.state.communityInsights = { phase: 'ready' }
+	self.state.online = false
+	updateVariables(self)
+	assert.equal(self.values.community_insights_status, 'unavailable')
+	assert.equal(self.feedbacks.community_insights_status.callback({ options: { status: 'ready' } }), false)
+})
+
 test('speaker API methods encode overlay IDs and send minimal PATCH; startSession uses POST', async () => {
 	const api = new StreamPulseApi('localhost', 3000)
 	const calls = []

@@ -27,6 +27,8 @@ Trivia's saved Reveal Delay waits after the countdown reaches zero; voting close
 
 **Session subscribers:** `chat_subscribers` includes new and returning subscribers recorded by updated StreamPulse from native Twitch EventSub or SocialStream Ninja. No shared chat message is required for native notifications; nearby duplicate notifications share one count. The variable name is unchanged.
 
+**Community insights:** the `community_insights_status` variable and matching status feedback report `off`, `scanning`, `ready`, `error` or `unavailable`. Status is checked every 30 seconds; tracking and chat messages remain configured in StreamPulse. No individual dossier data is exposed through these controls.
+
 Stream title and category variables keep showing current Twitch channel metadata while offline. Session title/category history on updated StreamPulse is live-only, beginning once at the actual broadcast start.
 
 **Milestone estimates:** `milestone_stream_estimate_days`, `milestone_hours_estimate_days` and `milestone_chatters_estimate_days` show approximate days to the next goal based on recent pace. They are empty when there is no estimate.

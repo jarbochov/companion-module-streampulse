@@ -145,6 +145,9 @@ class StreamPulseApi {
 	chatActivity() {
 		return this.request('/api/chatbot/activity')
 	}
+	communityInsightsStatus() {
+		return this.request('/api/community/insights/status')
+	}
 	chatEnabled(body) {
 		return this.request('/api/chatbot/enabled', { method: 'POST', body })
 	}
@@ -309,4 +312,7 @@ const obsConnectionStatus = (obs) => {
 	return obs.lastError ? 'error' : 'disconnected'
 }
 
-module.exports = { StreamPulseApi, obsConnectionStatus }
+const communityInsightsStatus = (status) =>
+	['off', 'scanning', 'ready', 'error'].includes(status?.phase) ? status.phase : 'unavailable'
+
+module.exports = { StreamPulseApi, obsConnectionStatus, communityInsightsStatus }

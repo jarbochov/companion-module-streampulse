@@ -67,4 +67,6 @@ Milestone estimates are available as `milestone_stream_estimate_days`, `mileston
 
 `chat_subscribers` counts new and returning subscribers in the collected session. Updated StreamPulse records native Twitch EventSub subscriptions even without a shared chat message, alongside SSN events; nearby duplicate notifications share one count. Existing buttons and variable references keep working.
 
+**Community insights:** `community_insights_status` and the matching feedback show `off`, `scanning`, `ready`, `error` or `unavailable`. Status refreshes every 30 seconds and becomes unavailable when StreamPulse or its status endpoint cannot be reached. Enable tracking in StreamPulse Config Editor and configure individual messages in Chat Bot; no per-person data is exposed.
+
 Stream title/category variables retain current Twitch metadata while offline. Updated StreamPulse records title/category history only during live broadcasts, with one starting state at the actual broadcast start. No action or variable IDs change.

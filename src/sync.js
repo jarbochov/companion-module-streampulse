@@ -44,6 +44,7 @@ function jobsFor(api, groups, wanted = []) {
 	add('live', async () => ({ chatActivity: await api.chatActivity() }))
 	if (wanted.length) add('live', async () => ({ placeholders: await api.placeholders() }))
 	add('discovery', async () => ({ overlayList: await api.overlays() }))
+	add('discovery', async () => ({ communityInsights: await api.communityInsightsStatus().catch(() => null) }))
 	add('discovery', async () => ({ matchupPresets: (await api.matchupPresets()).presets || [] }))
 	add('discovery', async () => ({ pollPresets: (await api.pollPresets()).presets || [] }))
 	add('discovery', async () => ({ tournamentPresets: (await api.tournamentPresets(false)).presets || [] }))
