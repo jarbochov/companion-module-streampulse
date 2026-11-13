@@ -7,6 +7,7 @@ module.exports = function (self, run) {
 	return {
 		matchup_score: {
 			name: 'Versus: Change game or round score',
+			description: 'Adjust game series wins or current round pips for a competitor (1-4)',
 			options: [
 				{
 					id: 'runner',
@@ -45,6 +46,7 @@ module.exports = function (self, run) {
 		},
 		matchup_clock: {
 			name: 'Versus: Clock / speedrun race control',
+			description: 'Start, pause, or reset the match clock, sync race runners, or change timer display mode',
 			options: [
 				{
 					id: 'action',
@@ -94,6 +96,7 @@ module.exports = function (self, run) {
 		},
 		matchup_runner: {
 			name: 'Versus: Runner finish / toggle / reset',
+			description: 'Lock a finish split, start/pause, or reset an individual speedrun race runner (1-4)',
 			options: [
 				{
 					id: 'runner',
@@ -124,6 +127,7 @@ module.exports = function (self, run) {
 		},
 		matchup_general: {
 			name: 'Versus: Swap sides / reset scores / queue / presets',
+			description: 'Swap competitor sides, reset scores, save match history, navigate the queue, or load a preset',
 			options: [
 				{
 					id: 'action',

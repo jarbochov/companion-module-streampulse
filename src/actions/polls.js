@@ -85,6 +85,7 @@ module.exports = function (self, run) {
 		},
 		poll_control: {
 			name: 'Polls: End / extend / cancel active poll',
+			description: 'End the active poll and crown a winner, add time to the timer, or cancel voting',
 			options: [
 				{
 					id: 'action',

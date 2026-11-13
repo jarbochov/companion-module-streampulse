@@ -34,6 +34,7 @@ module.exports = function (self, run) {
 		},
 		chat_send: {
 			name: 'Chat Bot: Send a chat message',
+			description: 'Send a custom message to stream chat through the StreamPulse Chat Bot',
 			options: [{ id: 'text', type: 'textinput', label: 'Message', default: '', useVariables: true }],
 			callback: async (e) => {
 				try {

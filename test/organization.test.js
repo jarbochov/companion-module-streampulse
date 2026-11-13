@@ -205,10 +205,10 @@ function digest(value) {
 
 // Captured from the monolithic definitions before extracting feature domains.
 const baseline = {
-	empty: 'f2b810e4265ad07ff0f24306630b2d1dec21877f776dc767445a42d18d8931e9',
-	populated: '18e898830a5237e572013827ad78296c3b20e0972c602afbc738b87cce904e59',
-	fallback: '7636cb6a8e73ba84c56c7d3d77630376b76805567f80705c22edebc677819de4',
-	presets: 'e8994659d9b07d7bc18aa883e2ac721fd02e10dda2a7caeb31f6d776cff2cd9f',
+	empty: '0f2b166b1e2ef6f3645b563bc7816608c929718a2843ce68cded7992d45db3ac',
+	populated: 'c607223535ded57b57f62866581889387a445c70d0eb6771fad363b0c847df35',
+	fallback: 'f95e5fd29faef20d6787ec5795ee54a7184285eb5ab4dd76bbe7aedfe5a954cc',
+	presets: '14cbfff1aad235483a27e8f936c9160515ef302ca5e28b58e110c2e41e527780',
 }
 
 test('Domain assembly preserves legacy IDs, order, options, callbacks and preset definitions', () => {
@@ -300,4 +300,74 @@ test('Extracted actions retain shared run polling and error handling across doma
 		'poll',
 		['error', 'unavailable'],
 	])
+})
+
+test('All registered actions include a non-empty description', () => {
+	const self = createSelf(true)
+	defineActions(self)
+	const entries = Object.entries(self.actions)
+	assert.ok(entries.length > 0)
+	for (const [id, def] of entries) {
+		assert.equal(
+			typeof def.description === 'string' && def.description.trim().length > 0,
+			true,
+			`Expected action "${id}" to define a non-empty description`,
+		)
+	}
+})
+
+test('alert_replay_last replays the last 1..N alerts in chronological order', async () => {
+	const self = createSelf()
+	const calls = []
+	self.poll = () => calls.push('poll')
+	self.log = (level, msg) => calls.push(['log', level, msg])
+	self.api.replayAlert = async (id) => {
+		calls.push(['replay', id])
+		return { ok: true, id }
+	}
+	defineActions(self)
+
+	const replay = self.actions.alert_replay_last
+	assert.ok(replay)
+	assert.deepEqual(replay.options, [
+		{
+			id: 'count',
+			type: 'number',
+			label: 'Number of alerts to replay',
+			default: 1,
+			min: 1,
+			max: 50,
+		},
+	])
+
+	// Empty history logs a warning without calling replayAlert
+	self.state.alerts = { history: [] }
+	await replay.callback({ options: { count: 2 } })
+	assert.deepEqual(calls, [['log', 'warn', 'No alert history to replay']])
+
+	// Populate unsorted history and verify omitted options, count=1, count=2, and count=3
+	self.state.alerts = {
+		history: [
+			{ id: 'a2', shownAt: '2026-01-01T10:02:00.000Z' },
+			{ id: 'a4', at: '2026-01-01T10:04:00.000Z' },
+			{ id: 'a1', shownAt: '2026-01-01T10:01:00.000Z' },
+			{ id: 'a3', shownAt: '2026-01-01T10:03:00.000Z' },
+		],
+	}
+
+	calls.length = 0
+	await replay.callback()
+	assert.deepEqual(calls, [['replay', 'a4'], 'poll'])
+
+	calls.length = 0
+	await replay.callback({ options: { count: 1 } })
+	assert.deepEqual(calls, [['replay', 'a4'], 'poll'])
+
+	calls.length = 0
+	await replay.callback({ options: { count: 2 } })
+	assert.deepEqual(calls, [['replay', 'a3'], ['replay', 'a4'], 'poll'])
+
+	calls.length = 0
+	await replay.callback({ options: { count: 3 } })
+	assert.deepEqual(calls, [['replay', 'a2'], ['replay', 'a3'], ['replay', 'a4'], 'poll'])
 })

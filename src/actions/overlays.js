@@ -12,6 +12,7 @@ module.exports = function (self, run) {
 	return {
 		page_navigate: {
 			name: 'Overlay: Navigate page (next, prev, first, last, auto)',
+			description: 'Step between pages or toggle automatic page rotation on a multi-page overlay',
 			options: [
 				{
 					id: 'overlay',
@@ -38,6 +39,7 @@ module.exports = function (self, run) {
 		},
 		page_goto: {
 			name: 'Overlay: Show page by name',
+			description: 'Switch a multi-page custom overlay directly to a specific page',
 			options: [
 				{ id: 'page', type: 'dropdown', label: 'Page', choices: pageChoices(self), default: pageChoices(self)[0].id },
 			],
@@ -48,6 +50,7 @@ module.exports = function (self, run) {
 		},
 		page_set_enabled: {
 			name: 'Overlay: Enable / disable page',
+			description: 'Include, exclude, or toggle a page in a multi-page overlay rotation',
 			options: [
 				{ id: 'page', type: 'dropdown', label: 'Page', choices: pageChoices(self), default: pageChoices(self)[0].id },
 				{
@@ -69,6 +72,7 @@ module.exports = function (self, run) {
 		},
 		overlay_visibility: {
 			name: 'Overlay: Show / hide entire overlay',
+			description: 'Show, hide, or toggle the visibility of an overlay on stream',
 			options: [
 				{
 					id: 'overlay',
@@ -93,6 +97,7 @@ module.exports = function (self, run) {
 		},
 		video_control: {
 			name: 'Overlay: Video playback (play, pause, toggle, restart, mute)',
+			description: 'Control playback and audio for a video or YouTube element on a custom overlay',
 			options: [
 				{
 					id: 'video',
@@ -125,6 +130,7 @@ module.exports = function (self, run) {
 		},
 		cutout_control: {
 			name: 'Overlay: Cutout punchthrough (toggle, punch, fill)',
+			description: 'Punch, fill, or toggle a transparent cutout hole on a custom overlay',
 			options: [
 				{
 					id: 'cutout',
@@ -152,6 +158,7 @@ module.exports = function (self, run) {
 		},
 		slideshow_control: {
 			name: 'Overlay: Slideshow control (play, pause, next, prev)',
+			description: 'Advance slides or play and pause a slideshow element on a custom overlay',
 			options: [
 				{
 					id: 'show',
@@ -181,6 +188,7 @@ module.exports = function (self, run) {
 		},
 		music_overlay: {
 			name: 'Overlay: Music overlay (show / hide / toggle)',
+			description: 'Show, hide, or toggle the now-playing music overlay',
 			options: [
 				{
 					id: 'action',

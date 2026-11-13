@@ -48,7 +48,7 @@ module.exports = function () {
 				down: [
 					{
 						actionId: 'alert_replay_last',
-						options: {},
+						options: { count: 1 },
 					},
 				],
 				up: [],

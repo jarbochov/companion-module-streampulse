@@ -56,6 +56,8 @@ module.exports = function (self, run) {
 	return {
 		tournament_control: {
 			name: 'Tournament: Match selection, highlight & bracket control',
+			description:
+				'Select or pin matches, toggle live bracket highlight, reset or rollback matches, or start a poll match vote',
 			options: [
 				{
 					id: 'action',

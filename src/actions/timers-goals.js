@@ -12,6 +12,7 @@ module.exports = function (self, run) {
 	return {
 		timer_control: {
 			name: 'Timer: Control (start, pause, resume, reset, add/subtract)',
+			description: 'Start, pause, resume, reset, adjust time, or toggle overlay visibility for a timer',
 			options: [
 				{
 					id: 'timer',
@@ -67,6 +68,7 @@ module.exports = function (self, run) {
 		},
 		goal_action: {
 			name: 'Goal: Control (reset, enable, disable, toggle)',
+			description: 'Reset progress or enable, disable, or toggle a broadcast goal',
 			options: [
 				{ id: 'goal', type: 'dropdown', label: 'Goal', choices: goalChoices(self), default: goalChoices(self)[0].id },
 				{

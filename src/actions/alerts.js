@@ -7,6 +7,7 @@ module.exports = function (self, run) {
 	return {
 		alert_queue: {
 			name: 'Alerts: Queue control (skip, pause, resume, clear)',
+			description: 'Skip the current alert, pause or resume the queue, or clear waiting alerts',
 			options: [
 				{
 					id: 'action',
@@ -25,6 +26,7 @@ module.exports = function (self, run) {
 		},
 		alert_mute: {
 			name: 'Alerts: Mute / unmute display',
+			description: 'Hold or resume alert display on overlays while keeping incoming alerts queued',
 			options: [
 				{
 					id: 'state',
@@ -61,17 +63,37 @@ module.exports = function (self, run) {
 		},
 		alert_replay_last: {
 			name: 'Alerts: Replay last alert',
-			options: [],
-			callback: async () => {
+			description: 'Replay the most recent alert or the last N alerts from history',
+			options: [
+				{
+					id: 'count',
+					type: 'number',
+					label: 'Number of alerts to replay',
+					default: 1,
+					min: 1,
+					max: 50,
+				},
+			],
+			callback: async ({ options } = {}) => {
 				const history = (self.state.alerts && self.state.alerts.history) || []
+				const count = Math.max(1, Math.min(50, Math.round(Number(options?.count) || 1)))
 				const stamp = (a) => Date.parse(a.shownAt || a.at) || 0
-				const last = history.slice().sort((a, b) => stamp(b) - stamp(a))[0]
-				if (!last) return self.log('warn', 'No alert history to replay')
-				return run(() => self.api.replayAlert(last.id))()
+				const targets = history
+					.slice()
+					.sort((a, b) => stamp(b) - stamp(a))
+					.slice(0, count)
+					.reverse()
+				if (!targets.length) return self.log('warn', 'No alert history to replay')
+				return run(async () => {
+					for (const item of targets) {
+						await self.api.replayAlert(item.id)
+					}
+				})()
 			},
 		},
 		alert_test: {
 			name: 'Alerts: Fire test for rule',
+			description: 'Fire a test alert for a specific rule regardless of trigger conditions',
 			options: [
 				{ id: 'rule', type: 'dropdown', label: 'Rule', choices: ruleChoices(self), default: ruleChoices(self)[0].id },
 			],
