@@ -1,10 +1,11 @@
 module.exports = function (self, run) {
 	return {
 		variable_counter: {
-			name: 'Variables: Change a counter (increment, decrement, reset)',
-			description: 'Increment, decrement or reset a StreamPulse counter (created in the Chat Bot page)',
+			name: 'Variables: Number counter controls (increment, decrement, reset)',
+			description:
+				'Change a Number variable using its saved bounds and precision; reset uses its explicit reset value. Legacy counters remain supported.',
 			options: [
-				{ id: 'name', type: 'textinput', label: 'Counter name', default: '' },
+				{ id: 'name', type: 'textinput', label: 'Number variable name', default: '' },
 				{
 					id: 'action',
 					type: 'dropdown',
@@ -16,11 +17,30 @@ module.exports = function (self, run) {
 						{ id: 'reset', label: 'Reset' },
 					],
 				},
-				{ id: 'amount', type: 'number', label: 'Amount', default: 1, min: 1, max: 100000 },
+				{
+					id: 'use_saved_step',
+					type: 'checkbox',
+					label: 'Use saved Number step',
+					default: false,
+					isVisible: (options) => options.action !== 'reset',
+				},
+				{
+					id: 'amount',
+					type: 'number',
+					label: 'Amount',
+					default: 1,
+					min: 0.000000000001,
+					max: 100000,
+					isVisible: (options) => !options.use_saved_step && options.action !== 'reset',
+				},
 			],
 			callback: async (e) => {
 				try {
-					await self.api.variable(e.options.name, e.options.action, { amount: e.options.amount })
+					await self.api.variable(
+						e.options.name,
+						e.options.action,
+						e.options.use_saved_step || e.options.action === 'reset' ? {} : { amount: e.options.amount },
+					)
 				} catch (err) {
 					self.log('error', err.message)
 				}
@@ -28,7 +48,8 @@ module.exports = function (self, run) {
 		},
 		variable_set: {
 			name: 'Variables: Set a value',
-			description: 'Set a StreamPulse variable or counter to a value (created if missing)',
+			description:
+				'Set a StreamPulse variable value. Existing Numbers retain bounds, precision, reset value and group membership.',
 			options: [
 				{ id: 'name', type: 'textinput', label: 'Variable name', default: '' },
 				{ id: 'value', type: 'textinput', label: 'Value', default: '', useVariables: true },

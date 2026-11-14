@@ -39,6 +39,8 @@ Stream title and category variables keep showing current Twitch channel metadata
 
 **Action Search Organization:** All actions feature clear category prefixes (`Alerts:`, `Overlay:`, `Speaker Badge:`, `Tier Maker:`, `Polls:`, `Poll Tournament:`, `Versus:`, `Tournament:`, `Randomizer:`, `Chat Bot:`, `Variables:`, `Timer:`, `Goal:`, `Production:`, `Session:`, `Server:`) and contiguous grouping so related commands appear together when searching or scrolling in Companion.
 
+**Numbers:** counter controls support Number variables, saved steps, bounds, precision and explicit reset values. Existing Counter buttons remain compatible; display formatting stays in StreamPulse overlays.
+
 Runner finish, toggle, and reset actions address the selected runner explicitly, including runners 2–4. Existing button configurations do not need to change.
 
 **Poll Tournament library:** save the active bracket as a reusable template, save a progress checkpoint, load saved history/checkpoints, or create a fresh bracket from a template. Load/create buttons require an explicit confirmation option and a library ID; see `companion/HELP.md` for the ID workflow. Library data is fetched only when needed by an action, not added to background polling.
