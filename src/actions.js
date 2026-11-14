@@ -8,6 +8,7 @@ const tournamentActions = require('./actions/tournaments')
 const randomizerActions = require('./actions/randomizer')
 const chatActions = require('./actions/chat')
 const variableActions = require('./actions/variables')
+const variableSetActions = require('./actions/variable-sets')
 const timerGoalActions = require('./actions/timers-goals')
 const productionActions = require('./actions/production')
 const { speakerActions } = require('./speakers')
@@ -36,5 +37,6 @@ module.exports = function (self) {
 		...productionActions(self, run),
 		...speakerActions(self),
 		...triviaActions(self, run),
+		...variableSetActions(self, run),
 	})
 }

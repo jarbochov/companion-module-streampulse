@@ -13,6 +13,7 @@ function initialState() {
 		status: null,
 		timers: {},
 		goals: [],
+		variableSets: [],
 		rules: [],
 		alerts: null,
 		pages: {},
@@ -189,6 +190,8 @@ class ModuleInstance extends InstanceBase {
 			this.applyPatch({ timers: data.timers })
 		} else if (msg.type === 'goals-update' && data.items) {
 			this.applyPatch({ goals: data.items })
+		} else if (msg.type === 'variables-update' && Array.isArray(data.sets)) {
+			this.applyPatch({ variableSets: data.sets })
 		} else if (['alert', 'alert-skip', 'alert-clear'].includes(msg.type)) {
 			this.scheduleRefresh('alerts')
 		} else if (msg.type === 'custom-overlay-page' && data.id) {

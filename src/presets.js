@@ -12,6 +12,7 @@ const matchupPresets = require('./presets/matchup')
 const tournamentPresets = require('./presets/tournaments')
 const tierListPresets = require('./presets/tier-list')
 const triviaPresets = require('./presets/trivia')
+const variableSetPresets = require('./presets/variable-sets')
 const { speakerPresets } = require('./speakers')
 
 module.exports = function (self) {
@@ -31,5 +32,6 @@ module.exports = function (self) {
 		...tierListPresets(),
 		...speakerPresets(self),
 		...triviaPresets(),
+		...variableSetPresets(self),
 	})
 }

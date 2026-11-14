@@ -102,6 +102,7 @@ function harness({ definitions = false } = {}) {
 		status: {},
 		timers: { timers: {} },
 		goals: { items: [] },
+		variableSets: { sets: [] },
 		alerts: { queue: { pending: 0 }, rules: [] },
 		musicOverlay: { visible: true },
 		overlayVisibility: { overlays: [] },
@@ -370,4 +371,59 @@ test('overlay events update speaker choices, remove deleted overlays and rebuild
 	assert.equal(instance.state.tierList.items[0].id, 'game')
 	assert.ok(instance.rebuilds > before)
 	assert.deepEqual(calls, ['tierList'])
+})
+
+test('Variable Set snapshots and websocket updates drive live definitions, feedbacks and presets', async () => {
+	const { instance, responses, calls } = harness({ definitions: true })
+	const first = {
+		id: 'casters',
+		name: 'Casters',
+		slotsCount: 1,
+		roster: [{ id: 'alex', label: 'Alex' }],
+		slots: ['alex'],
+	}
+	responses.variableSets = { sets: [first] }
+	await instance.poll()
+	assert.ok(calls.includes('variableSets'))
+	assert.equal(instance.values.set_casters_active, 'Alex')
+	assert.equal(instance.values.set_casters_rotation, 'off')
+	assert.ok(instance.actions.variable_set_assign.options[0].choices.some((choice) => choice.id === 'casters'))
+	const updated = {
+		...first,
+		name: 'Panel',
+		slotsCount: 2,
+		slots: ['', 'alex'],
+		rotation: { enabled: true, entryId: 'alex' },
+	}
+	instance.handleWebSocketMessage({ type: 'variables-update', data: { variables: [], sets: [updated], rotated: true } })
+	assert.equal(instance.values.set_casters_slot2, 'Alex')
+	assert.equal(instance.values.set_casters_rotation_entry, 'Alex')
+	assert.equal(instance.feedbacks.variable_set_rotating.callback({ options: { set: 'casters' } }), true)
+	assert.equal(instance.actions.variable_set_assign.options[0].choices[0].label, 'Panel')
+	assert.ok(instance.variableDefinitions.some((def) => def.variableId === 'set_casters_slot2'))
+	assert.equal(instance.presets.variable_set_rotation_casters.name, 'Panel: Toggle Rotation')
+	instance.handleWebSocketMessage({ type: 'variables-update', data: { sets: [] } })
+	assert.ok(!instance.variableDefinitions.some((def) => def.variableId === 'set_casters_slot2'))
+	assert.equal(instance.presets.variable_set_rotation_casters, undefined)
+})
+
+test('newer Variable Set websocket snapshots win over older poll responses and optional failures preserve state', async () => {
+	const { instance, responses } = harness()
+	let release
+	responses.variableSets = () =>
+		new Promise((resolve) => {
+			release = resolve
+		})
+	const pending = instance.poll()
+	await new Promise((resolve) => setImmediate(resolve))
+	instance.handleWebSocketMessage({ type: 'variables-update', data: { sets: [{ id: 'new', name: 'New' }] } })
+	release({ sets: [{ id: 'old', name: 'Old' }] })
+	await pending
+	assert.equal(instance.state.variableSets[0].id, 'new')
+	responses.variableSets = () => {
+		throw new Error('Old server')
+	}
+	await instance.poll()
+	assert.equal(instance.state.online, true)
+	assert.equal(instance.state.variableSets[0].id, 'new')
 })

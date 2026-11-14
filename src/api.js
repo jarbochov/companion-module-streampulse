@@ -166,6 +166,12 @@ class StreamPulseApi {
 	placeholders() {
 		return this.request('/api/chatbot/placeholders')
 	}
+	variableSets() {
+		return this.request('/api/variables/sets')
+	}
+	variableSetControl(id, action, body = {}) {
+		return this.request(`/api/variables/sets/${encodeURIComponent(id)}/${action}`, { method: 'POST', body })
+	}
 	variable(name, action, body = {}) {
 		const base = `/api/variables/${encodeURIComponent(name)}`
 		return this.request(action === 'set' ? base : `${base}/${action}`, {

@@ -1,5 +1,6 @@
 const { obsConnectionStatus, communityInsightsStatus } = require('./api')
 const { speakerVariablePrefix, speakerFieldValue, speakerFieldVisible } = require('./speakers')
+const { setPrefix, setShape, entryLabel } = require('./variable-sets')
 
 const SPEAKER_VARS = {
 	name: ['name', 'Name'],
@@ -241,6 +242,15 @@ function defineVariables(self) {
 		defs[`slideshow_${s}_position`] = { name: `Slideshow ${sh.name}: slide (position/count)` }
 		defs[`slideshow_${s}_state`] = { name: `Slideshow ${sh.name}: state (playing / paused / offline)` }
 	}
+	for (const set of self.state.variableSets || []) {
+		const prefix = setPrefix(set.id)
+		const name = set.name || set.id
+		defs[`${prefix}_rotation`] = { name: `Variable Set ${name}: rotation (on / off)` }
+		defs[`${prefix}_rotation_entry`] = { name: `Variable Set ${name}: rotation entry` }
+		defs[`${prefix}_active`] = { name: `Variable Set ${name}: active entry` }
+		for (let i = 1; i <= set.slotsCount; i++) defs[`${prefix}_slot${i}`] = { name: `Variable Set ${name}: slot ${i}` }
+	}
+	self.variableSetShape = setShape(self.state.variableSets)
 	for (const speaker of self.state.speakers || []) {
 		const prefix = speakerVariablePrefix(speaker)
 		const label = `Speaker ${speaker.overlayName || speaker.overlayId} / ${speaker.name || speaker.elementId}`
@@ -581,9 +591,17 @@ function updateVariables(self) {
 	values.trivia_correct_letter =
 		correctChoice?.letter || (correctIndex != null ? String.fromCharCode(65 + correctIndex) : '')
 
-	// Timers and goals can be added or removed at runtime
+	for (const set of self.state.variableSets || []) {
+		const prefix = setPrefix(set.id)
+		values[`${prefix}_rotation`] = set.rotation?.enabled ? 'on' : 'off'
+		values[`${prefix}_rotation_entry`] = entryLabel(set, set.rotation?.entryId)
+		values[`${prefix}_active`] = entryLabel(set, set.slotsCount > 0 ? set.slots?.[0] : set.activeEntry)
+		for (let i = 0; i < set.slotsCount; i++) values[`${prefix}_slot${i + 1}`] = entryLabel(set, set.slots?.[i])
+	}
+
+	// Dynamic variables can be added, removed or renamed at runtime
 	const keys = Object.keys(values).sort().join(',')
-	if (keys !== self.valueKeys) {
+	if (keys !== self.valueKeys || setShape(self.state.variableSets) !== self.variableSetShape) {
 		self.valueKeys = keys
 		defineVariables(self)
 	}

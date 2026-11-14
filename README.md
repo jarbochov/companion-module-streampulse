@@ -15,6 +15,8 @@ Load it in Companion as a developer module (point Companion's module dev path at
 
 **Tier Maker Studio:** actions to start votes on specific or next unranked items, freeze/lock voting without placing, lock & place consensus into tier, cancel votes, reset item placements, and load template presets; variables for `tier_voting`, `tier_vote_status`, `tier_item`, `tier_votes`, `tier_consensus`, `tier_agreement`, `tier_time`, `tier_title`; feedbacks for `tier_voting_active`, `tier_vote_locked`, and `tier_consensus_tier`; button presets for starting votes, locking votes, placing consensus, and cancelling votes.
 
+**Variable Sets:** assign and cycle entries, manage slots and queues, and control shared rotation. Per-set variables, active-entry and rotation feedbacks, and rotation toggle presets follow live server state.
+
 **Trivia Studio:** start a selected question, reveal, navigate, reset played marks, shuffle, load packs, or vote. Phase feedback and question/vote/countdown variables follow the server's live state; correct-answer variables stay empty until reveal. Disabling Chat Voting in StreamPulse also silences automatic trivia announcements.
 
 Trivia's saved Reveal Delay waits after the countdown reaches zero; voting closes at zero while the phase remains `question` until reveal. Auto-Advance Delay separately holds the revealed answer. The Companion Reveal action always reveals immediately, bypassing a pending delay.

@@ -13,6 +13,7 @@ const AMBER = 0xcc8800
 const BLUE = 0x1a73e8
 const WHITE = 0xffffff
 const { obsConnectionStatus, communityInsightsStatus } = require('./api')
+const { setOption } = require('./variable-sets')
 const {
 	PROFILE_FIELDS,
 	VISIBILITY_FIELDS,
@@ -33,6 +34,52 @@ const {
 
 module.exports = async function (self) {
 	self.setFeedbackDefinitions({
+		variable_set_rotating: {
+			name: 'Variable Set: rotation enabled',
+			type: 'boolean',
+			defaultStyle: { bgcolor: GREEN, color: WHITE },
+			options: [setOption(self)],
+			callback: ({ options }) =>
+				!!(self.state.variableSets || []).find((set) => set.id === options.set)?.rotation?.enabled,
+		},
+		variable_set_entry_active: {
+			name: 'Variable Set: entry active',
+			type: 'boolean',
+			defaultStyle: { bgcolor: GREEN, color: WHITE },
+			options: [
+				setOption(self),
+				{ id: 'entry', type: 'textinput', label: 'Entry ID or label', default: '' },
+				{
+					id: 'source',
+					type: 'dropdown',
+					label: 'Match',
+					default: 'any',
+					choices: [
+						{ id: 'any', label: 'Any active entry, slot or rotation' },
+						{ id: 'active', label: 'Slotless active entry' },
+						{ id: 'slots', label: 'Any slot' },
+						{ id: 'rotation', label: 'Rotation entry' },
+					],
+				},
+			],
+			callback: ({ options }) => {
+				const set = (self.state.variableSets || []).find((item) => item.id === options.set)
+				const target = String(options.entry || '')
+					.trim()
+					.toLowerCase()
+				if (!set || !target) return false
+				const entry = (set.roster || []).find(
+					(item) => String(item.id).toLowerCase() === target || String(item.label || '').toLowerCase() === target,
+				)
+				if (!entry) return false
+				const source = options.source || 'any'
+				return Boolean(
+					((source === 'any' || source === 'active') && set.activeEntry === entry.id) ||
+					((source === 'any' || source === 'slots') && (set.slots || []).includes(entry.id)) ||
+					((source === 'any' || source === 'rotation') && set.rotation?.entryId === entry.id),
+				)
+			},
+		},
 		community_insights_status: {
 			name: 'Community: insights indexing status',
 			type: 'boolean',

@@ -26,6 +26,7 @@ function jobsFor(api, groups, wanted = []) {
 	add('core', async () => ({ status: await api.status(), online: true }), true)
 	add('core', async () => ({ timers: (await api.timers()).timers || {} }))
 	add('core', async () => ({ goals: (await api.goals()).items || [] }))
+	add('core', async () => ({ variableSets: (await api.variableSets()).sets || [] }))
 	add('alerts', async () => {
 		const alerts = await api.alerts()
 		return { alerts: alerts.queue || null, rules: alerts.rules || [] }
@@ -118,6 +119,7 @@ function choiceSignature(state) {
 	return JSON.stringify([
 		Object.values(state.timers).map((t) => [t.id, t.label]),
 		state.goals.map((g) => [g.id, g.title]),
+		(state.variableSets || []).map((set) => [set.id, set.name]),
 		state.rules.map((r) => [r.id, r.name]),
 		...['slideshows', 'videos', 'cutouts'].map((key) =>
 			(state[key] || []).map((item) => [item.overlayId, item.elementId, item.name]),
