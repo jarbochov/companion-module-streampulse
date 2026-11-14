@@ -17,6 +17,8 @@ Load it in Companion as a developer module (point Companion's module dev path at
 
 **Variable Sets:** assign and cycle entries, manage slots and queues, and control shared rotation. Per-set variables, active-entry and rotation feedbacks, and rotation toggle presets follow live server state.
 
+**Variable Groups & Fonts:** groups organize ordinary variables without renaming their Companion variables. Existing variable-value actions can update font-family values; no extra polling or group actions are needed.
+
 **Trivia Studio:** start a selected question, reveal, navigate, reset played marks, shuffle, load packs, or vote. Phase feedback and question/vote/countdown variables follow the server's live state; correct-answer variables stay empty until reveal. Disabling Chat Voting in StreamPulse also silences automatic trivia announcements.
 
 Trivia's saved Reveal Delay waits after the countdown reaches zero; voting closes at zero while the phase remains `question` until reveal. Auto-Advance Delay separately holds the revealed answer. The Companion Reveal action always reveals immediately, bypassing a pending delay.
