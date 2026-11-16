@@ -166,7 +166,9 @@ class StreamPulseApi {
 	placeholders() {
 		return this.request('/api/chatbot/placeholders')
 	}
-	variableSets() {
+	async variableSets() {
+		const variables = await this.request('/api/variables')
+		if (Array.isArray(variables?.sets)) return variables
 		return this.request('/api/variables/sets')
 	}
 	variableSetControl(id, action, body = {}) {

@@ -15,7 +15,7 @@ Load it in Companion as a developer module (point Companion's module dev path at
 
 **Tier Maker Studio:** actions to start votes on specific or next unranked items, freeze/lock voting without placing, lock & place consensus into tier, cancel votes, reset item placements, and load template presets; variables for `tier_voting`, `tier_vote_status`, `tier_item`, `tier_votes`, `tier_consensus`, `tier_agreement`, `tier_time`, `tier_title`; feedbacks for `tier_voting_active`, `tier_vote_locked`, and `tier_consensus_tier`; button presets for starting votes, locking votes, placing consensus, and cancelling votes.
 
-**Variable Sets:** assign and cycle entries, manage slots and queues, and control shared rotation. Per-set variables, active-entry and rotation feedbacks, and rotation toggle presets follow live server state.
+**Variable Sets:** assign and cycle entries, manage slots and queues, and control shared rotation. Linked entry and Linked entries role fields follow their links without changing target slots. For a Tracker, choose a discovered tracker item, an owner entry ID or occupied slot, then set, toggle or step its level. Reset a tracker for one entry/slot or all owners. Item tiers determine levels; the field maximum is used when an item has no tiers. Per-set variables, feedbacks and rotation presets follow live state.
 
 **Variable Groups & Fonts:** groups organize ordinary variables without renaming their Companion variables. Existing variable-value actions can update font-family values; no extra polling or group actions are needed.
 

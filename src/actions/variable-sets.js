@@ -1,4 +1,4 @@
-const { setOption } = require('../variable-sets')
+const { setOption, trackerChoices } = require('../variable-sets')
 
 module.exports = function (self, run) {
 	const text = (id, label, defaultValue = '') => ({
@@ -45,6 +45,59 @@ module.exports = function (self, run) {
 		callback: async ({ options }) => run(() => control(options.set, action, { mode: options.mode }))(),
 	})
 	const rotation = (name, action) => simple(`Rotation ${name}`, `rotation/${action}`)
+	const tracker = (name, action, withTarget = true) => {
+		const choices = trackerChoices(self.state.variableSets, withTarget)
+		const scopes = [
+			{ id: 'entry', label: 'Entry ID' },
+			{ id: 'slot', label: 'Current entry in slot' },
+		]
+		if (!withTarget) scopes.push({ id: 'all', label: 'All entries' })
+		const owner = text('owner', 'Entry ID or slot number/name')
+		owner.isVisible = (options) => options.scope !== 'all'
+		const options = [
+			{
+				id: 'tracker',
+				type: 'dropdown',
+				label: withTarget ? 'Tracker item' : 'Tracker',
+				choices,
+				default: choices[0].id,
+			},
+			{ id: 'scope', type: 'dropdown', label: 'Owner', choices: scopes, default: 'entry' },
+			owner,
+		]
+		if (action === 'set') options.push(text('value', 'Level', '1'))
+		if (action === 'step') options.push(text('delta', 'Level change', '1'))
+		return {
+			name: `Variable Set: Tracker ${name}`,
+			description: `${name} a tracker for an entry or the current entry in a slot`,
+			options,
+			callback: async ({ options }) =>
+				run(async () => {
+					const selected = trackerChoices(self.state.variableSets, withTarget).find(
+						(choice) => choice.id === options.tracker,
+					)
+					if (!selected || !selected.id) throw new Error('Select an available tracker' + (withTarget ? ' item' : ''))
+					const [set, field, target] = JSON.parse(selected.id)
+					const body = { field }
+					if (withTarget) body.target = target
+					if (options.scope === 'all' && !withTarget) {
+						body.all = true
+					} else if (options.scope === 'entry' || options.scope === 'slot') {
+						const owner = await self.parseVariablesInString(String(options.owner ?? ''))
+						if (!owner.trim()) throw new Error('Enter an owner entry ID or slot')
+						body[options.scope] = owner
+					} else {
+						throw new Error('Select an owner')
+					}
+					for (const key of action === 'set' ? ['value'] : action === 'step' ? ['delta'] : []) {
+						const value = await self.parseVariablesInString(String(options[key] ?? ''))
+						if (!value.trim() || !Number.isInteger(Number(value))) throw new Error(`${key} must be an integer`)
+						body[key] = Number(value)
+					}
+					await control(set, `checklist/${action}`, body)
+				})(),
+		}
+	}
 	return {
 		variable_set_assign: simple('Assign entry', 'assign', [slot(), entry()], ['slot', 'entry']),
 		variable_set_clear: simple('Clear slot', 'clear', [slot('Slot number, name or all')], ['slot']),
@@ -101,6 +154,10 @@ module.exports = function (self, run) {
 		variable_set_rotation_toggle: rotation('toggle', 'toggle'),
 		variable_set_rotation_next: rotation('next', 'next'),
 		variable_set_rotation_prev: rotation('previous', 'prev'),
+		variable_set_tracker_set: tracker('set level', 'set'),
+		variable_set_tracker_toggle: tracker('toggle', 'toggle'),
+		variable_set_tracker_step: tracker('step level', 'step'),
+		variable_set_tracker_reset: tracker('reset', 'reset', false),
 		variable_set_rotation_configure: {
 			name: 'Variable Set: Configure rotation',
 			description: 'Set the shared rotation interval and selection mode',

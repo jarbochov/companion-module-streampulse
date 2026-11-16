@@ -73,15 +73,62 @@ function mock() {
 test('Variable Set API encodes IDs and sends JSON without altering empty entries', async () => {
 	const api = new StreamPulseApi('localhost', 3000)
 	const calls = []
-	api.request = async (...args) => calls.push(args)
+	api.request = async (...args) => {
+		calls.push(args)
+		return { sets: [] }
+	}
 	await api.variableSets()
 	await api.variableSetControl('set / one', 'assign', { slot: 'Left', entry: '' })
 	await api.variableSetControl('set / one', 'rotation/next')
 	assert.deepEqual(calls, [
-		['/api/variables/sets'],
+		['/api/variables'],
 		['/api/variables/sets/set%20%2F%20one/assign', { method: 'POST', body: { slot: 'Left', entry: '' } }],
 		['/api/variables/sets/set%20%2F%20one/rotation/next', { method: 'POST', body: {} }],
 	])
+})
+
+test('Variable Set discovery falls back for older variable responses', async () => {
+	const api = new StreamPulseApi('localhost', 3000)
+	const calls = []
+	api.request = async (path) => {
+		calls.push(path)
+		return path === '/api/variables' ? { variables: [] } : { sets: [{ id: 'legacy' }] }
+	}
+	assert.deepEqual(await api.variableSets(), { sets: [{ id: 'legacy' }] })
+	assert.deepEqual(calls, ['/api/variables', '/api/variables/sets'])
+})
+
+test('tracker actions select discovered fields and items and address entry, slot or all owners', async () => {
+	const self = mock()
+	self.state.variableSets[0].fields = [{ id: 'progress', label: 'Progress', type: 'checklist', targetSet: 'games' }]
+	self.state.variableSets.push({
+		id: 'games',
+		name: 'Games',
+		roster: [{ id: 'game/1', label: 'First game' }],
+	})
+	defineActions(self)
+	const item = JSON.stringify(['casters', 'progress', 'game/1'])
+	const tracker = JSON.stringify(['casters', 'progress'])
+	assert.deepEqual(self.actions.variable_set_tracker_set.options[0].choices, [
+		{ id: item, label: 'Casters / Progress / First game' },
+	])
+	assert.deepEqual(self.actions.variable_set_tracker_reset.options[0].choices, [
+		{ id: tracker, label: 'Casters / Progress' },
+	])
+	const invoke = (id, options) => self.actions[`variable_set_tracker_${id}`].callback({ options })
+	await invoke('set', { tracker: item, scope: 'entry', owner: '$(test:entry)', value: '2' })
+	await invoke('step', { tracker: item, scope: 'slot', owner: 'Left', delta: '-1' })
+	await invoke('toggle', { tracker: item, scope: 'entry', owner: 'alex' })
+	await invoke('reset', { tracker, scope: 'slot', owner: '2' })
+	await invoke('reset', { tracker, scope: 'all', owner: 'ignored' })
+	assert.deepEqual(self.calls, [
+		['casters', 'checklist/set', { field: 'progress', target: 'game/1', entry: 'Alex', value: 2 }],
+		['casters', 'checklist/step', { field: 'progress', target: 'game/1', slot: 'Left', delta: -1 }],
+		['casters', 'checklist/toggle', { field: 'progress', target: 'game/1', entry: 'alex' }],
+		['casters', 'checklist/reset', { field: 'progress', slot: '2' }],
+		['casters', 'checklist/reset', { field: 'progress', all: true }],
+	])
+	assert.equal(self.polls, 5)
 })
 
 test('Variable Set actions use discovered choices and correct command payloads', async () => {

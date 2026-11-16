@@ -11,6 +11,29 @@ const setOption = (self) => ({
 	default: setChoices(self)[0].id,
 })
 
+const trackerChoices = (sets, withTarget = false) => {
+	const choices = []
+	for (const set of sets || []) {
+		for (const field of set.fields || []) {
+			const fieldId = field.id || field.key
+			if (field.type !== 'checklist' || !fieldId) continue
+			const label = `${set.name || set.id} / ${field.label || field.name || fieldId}`
+			if (!withTarget) {
+				choices.push({ id: JSON.stringify([set.id, fieldId]), label })
+				continue
+			}
+			const targetSet = sets.find((candidate) => candidate.id === field.targetSet)
+			for (const target of targetSet?.roster || []) {
+				choices.push({
+					id: JSON.stringify([set.id, fieldId, target.id]),
+					label: `${label} / ${target.label || target.id}`,
+				})
+			}
+		}
+	}
+	return choices.length ? choices : [{ id: '', label: withTarget ? '(no tracker items found)' : '(no trackers found)' }]
+}
+
 const setPrefix = (id) =>
 	`set_${String(id)
 		.toLowerCase()
@@ -19,4 +42,4 @@ const setPrefix = (id) =>
 const setShape = (sets) => JSON.stringify((sets || []).map((set) => [set.id, set.name, set.slotsCount]))
 const entryLabel = (set, id) => (id && (set.roster || []).find((entry) => entry.id === id)?.label) || ''
 
-module.exports = { setChoices, setOption, setPrefix, setShape, entryLabel }
+module.exports = { setChoices, setOption, setPrefix, setShape, entryLabel, trackerChoices }

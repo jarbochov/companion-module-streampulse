@@ -414,6 +414,7 @@ test('newer Variable Set websocket snapshots win over older poll responses and o
 		new Promise((resolve) => {
 			release = resolve
 		})
+
 	const pending = instance.poll()
 	await new Promise((resolve) => setImmediate(resolve))
 	instance.handleWebSocketMessage({ type: 'variables-update', data: { sets: [{ id: 'new', name: 'New' }] } })
@@ -426,4 +427,29 @@ test('newer Variable Set websocket snapshots win over older poll responses and o
 	await instance.poll()
 	assert.equal(instance.state.online, true)
 	assert.equal(instance.state.variableSets[0].id, 'new')
+})
+
+test('tracker choices refresh when fields or catalog entries change', async () => {
+	const { instance, responses } = harness({ definitions: true })
+	const owner = {
+		id: 'players',
+		name: 'Players',
+		fields: [{ id: 'progress', label: 'Progress', type: 'checklist', targetSet: 'games' }],
+		roster: [],
+	}
+	const catalog = { id: 'games', name: 'Games', roster: [{ id: 'a', label: 'Alpha' }] }
+	responses.variableSets = { sets: [owner, catalog] }
+	await instance.poll()
+	assert.equal(instance.actions.variable_set_tracker_set.options[0].choices[0].label, 'Players / Progress / Alpha')
+	instance.handleWebSocketMessage({
+		type: 'variables-update',
+		data: {
+			sets: [
+				{ ...owner, fields: [{ ...owner.fields[0], label: 'Completion' }] },
+				{ ...catalog, roster: [{ id: 'b', label: 'Beta' }] },
+			],
+		},
+	})
+	assert.equal(instance.actions.variable_set_tracker_set.options[0].choices[0].label, 'Players / Completion / Beta')
+	assert.equal(instance.actions.variable_set_tracker_reset.options[0].choices[0].label, 'Players / Completion')
 })
