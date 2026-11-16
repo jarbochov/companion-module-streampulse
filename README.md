@@ -19,6 +19,8 @@ Load it in Companion as a developer module (point Companion's module dev path at
 
 **Variable Groups & Fonts:** groups organize ordinary variables without renaming their Companion variables. Existing variable-value actions can update font-family values; no extra polling or group actions are needed.
 
+**Date, time and duration variables:** use the existing **Variables: Set a value** action to set static date, time, local date-time or duration strings (for example `45m` or `1:30:00`). These values are not timers. Linked entries and Trackers remain Variable Set fields.
+
 **Trivia Studio:** start a selected question, reveal, navigate, reset played marks, shuffle, load packs, or vote. Phase feedback and question/vote/countdown variables follow the server's live state; correct-answer variables stay empty until reveal. Disabling Chat Voting in StreamPulse also silences automatic trivia announcements.
 
 Trivia's saved Reveal Delay waits after the countdown reaches zero; voting closes at zero while the phase remains `question` until reveal. Auto-Advance Delay separately holds the revealed answer. The Companion Reveal action always reveals immediately, bypassing a pending delay.
