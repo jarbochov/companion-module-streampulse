@@ -67,8 +67,27 @@ function mock() {
 			throw new Error(`${level}: ${message}`)
 		},
 	}
+
 	return self
 }
+
+test('group-qualified variable labels refresh without changing action identities or adding duplicate IDs', () => {
+	const self = mock()
+	self.state.status = { customVars: [{ name: 'accent', key: 'theme.accent', value: '#123456' }] }
+	updateVariables(self)
+	assert.equal(self.definitions.find((v) => v.variableId === 'var_accent').name, 'StreamPulse variable: theme.accent')
+	assert.equal(self.values.var_accent, '#123456')
+	self.state.status = { customVars: [{ name: 'accent', key: 'broadcast.accent', value: '#123456' }] }
+	updateVariables(self)
+	assert.equal(
+		self.definitions.find((v) => v.variableId === 'var_accent').name,
+		'StreamPulse variable: broadcast.accent',
+	)
+	assert.equal(self.definitions.filter((v) => v.variableId === 'var_accent').length, 1)
+	self.state.status = { customVars: [{ name: 'accent', key: 'accent', value: '#123456' }] }
+	updateVariables(self)
+	assert.equal(self.definitions.find((v) => v.variableId === 'var_accent').name, 'StreamPulse variable: accent')
+})
 
 test('Variable Set API encodes IDs and sends JSON without altering empty entries', async () => {
 	const api = new StreamPulseApi('localhost', 3000)

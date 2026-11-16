@@ -203,11 +203,11 @@ function digest(value) {
 	return createHash('sha256').update(serialized).digest('hex')
 }
 
-// Updated for Number options; legacy action IDs and preset definitions remain stable.
+// Updated for Number options and API-name labels; action IDs and preset definitions remain stable.
 const baseline = {
-	empty: 'f61da747fc69abe38aeadfbf8625d8dbd18a66d06f466d731658456adab29a3c',
-	populated: 'c442c8e61956c4fc4686074acfd07c84c583523ac3b7b00f4609308199f739ee',
-	fallback: '99bd13efe29e45945a7f5a6c3ca1a059926da29e2a10b01e8c1a22bcf646ae47',
+	empty: '38c7405ec133f272637b6a5a5db102d273575816d540efbcca64446a689ed254',
+	populated: 'abb98900258ff50c55266c8566c6c389ea5569829588a4e01bdbeb74dccf26e5',
+	fallback: 'a3df18e9d795b0b23771f6f54473b2b1e31be3435e9a68d9f26c562a216606f1',
 	presets: '14cbfff1aad235483a27e8f936c9160515ef302ca5e28b58e110c2e41e527780',
 }
 

@@ -5,7 +5,7 @@ module.exports = function (self, run) {
 			description:
 				'Change a Number variable using its saved bounds and precision; reset uses its explicit reset value. Legacy counters remain supported.',
 			options: [
-				{ id: 'name', type: 'textinput', label: 'Number variable name', default: '' },
+				{ id: 'name', type: 'textinput', label: 'Number API name (without group prefix)', default: '' },
 				{
 					id: 'action',
 					type: 'dropdown',
@@ -51,7 +51,7 @@ module.exports = function (self, run) {
 			description:
 				'Set a StreamPulse variable value. Existing Numbers retain bounds, precision, reset value and group membership.',
 			options: [
-				{ id: 'name', type: 'textinput', label: 'Variable name', default: '' },
+				{ id: 'name', type: 'textinput', label: 'Variable API name (without group prefix)', default: '' },
 				{ id: 'value', type: 'textinput', label: 'Value', default: '', useVariables: true },
 			],
 			callback: async (e) => {
@@ -65,7 +65,7 @@ module.exports = function (self, run) {
 		variable_roll: {
 			name: 'Variables: Roll list / topic',
 			description: 'Advance or randomize a StreamPulse list variable (e.g. topic list, challenge wheel)',
-			options: [{ id: 'name', type: 'textinput', label: 'List variable name', default: '' }],
+			options: [{ id: 'name', type: 'textinput', label: 'List API name (without group prefix)', default: '' }],
 			callback: async (e) => run(() => self.api.variableRoll(e.options.name))(),
 		},
 	}

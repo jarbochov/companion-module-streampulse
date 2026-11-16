@@ -23,7 +23,7 @@ Set individual entry fields or `enabled` / `inGroup` / `label` properties, atomi
 
 **Display Library / Tables & Badges:** reusable table and badge designs are also built in Display Library and placed as Saved Displays. Tables show ordered Variable Set rows and linked role fields; badge design editing has moved out of the overlay inspector. Existing Variable Set assignment/advance/group controls change the displayed data; existing Tracker actions still operate inventory progress. Design editing does not add Companion polling or new on-air CRUD controls.
 
-**Variable Groups & Fonts:** groups organize ordinary variables without renaming their Companion variables. Existing variable-value actions can update font-family values; no extra polling or group actions are needed.
+**Variable Groups & Fonts:** grouped StreamPulse placeholders use `{{var.theme.accent}}` (lowercase group namespace plus variable name). Module variable labels show this discovered `key` and refresh when groups change; Companion IDs remain `var_<API-name>` and value/counter/list actions still take the unprefixed API name, e.g. `accent`. Moving a variable or renaming its group changes its StreamPulse placeholder/Number-binding path without aliases or automatic reference rewrites. Ungrouped and set-generated paths are unchanged. Existing value actions can update font families; no extra polling or group actions are needed.
 
 **Date, time and duration variables:** use the existing **Variables: Set a value** action to set static date, time, local date-time or duration strings (for example `45m` or `1:30:00`). These values are not timers. Linked entries and Trackers remain Variable Set fields.
 

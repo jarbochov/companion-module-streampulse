@@ -222,7 +222,7 @@ function defineVariables(self) {
 		defs[`timer_${s}_state`] = { name: `Timer ${t.label || t.id}: state` }
 	}
 	for (const v of (self.state.status && self.state.status.customVars) || [])
-		defs[`var_${slug(v.name)}`] = { name: `StreamPulse variable: ${v.name}` }
+		defs[`var_${slug(v.name)}`] = { name: `StreamPulse variable: ${v.key || v.name}` }
 	defs.chat_last_command = { name: 'Chat bot: last command or trigger used' }
 	defs.chat_last_user = { name: 'Chat bot: who used it' }
 	defs.chat_bot_state = { name: 'Chat bot: on or off' }
@@ -251,6 +251,7 @@ function defineVariables(self) {
 		for (let i = 1; i <= set.slotsCount; i++) defs[`${prefix}_slot${i}`] = { name: `Variable Set ${name}: slot ${i}` }
 	}
 	self.variableSetShape = setShape(self.state.variableSets)
+	self.customVariableShape = JSON.stringify((self.state.status?.customVars || []).map((v) => [v.name, v.key || v.name]))
 	for (const speaker of self.state.speakers || []) {
 		const prefix = speakerVariablePrefix(speaker)
 		const label = `Speaker ${speaker.overlayName || speaker.overlayId} / ${speaker.name || speaker.elementId}`
@@ -601,7 +602,12 @@ function updateVariables(self) {
 
 	// Dynamic variables can be added, removed or renamed at runtime
 	const keys = Object.keys(values).sort().join(',')
-	if (keys !== self.valueKeys || setShape(self.state.variableSets) !== self.variableSetShape) {
+	const customVariableShape = JSON.stringify((st?.customVars || []).map((v) => [v.name, v.key || v.name]))
+	if (
+		keys !== self.valueKeys ||
+		setShape(self.state.variableSets) !== self.variableSetShape ||
+		customVariableShape !== self.customVariableShape
+	) {
 		self.valueKeys = keys
 		defineVariables(self)
 	}
