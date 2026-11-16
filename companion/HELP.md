@@ -21,9 +21,11 @@ Controls a running [StreamPulse](https://github.com/jarbochov/StreamPulse) serve
 
 Linked entry and Linked entries role fields follow their links in schedule overlays; they do not assign or change slots in the target set. For tracker buttons, choose **Variable Set: Tracker set level**, **toggle**, or **step level**, then select a discovered set / tracker / catalog item. Choose an owner by entry ID or the current entry in a 1-based slot number or slot name. Set accepts a level; step accepts a signed change. Catalog item tiers define levels, with the tracker's maximum as fallback when no item tiers exist. **Tracker reset** selects the tracker and resets one entry, the entry in a slot, or all owners. Owner and level inputs support Companion variables.
 
-### Display Library: reusable Inventory displays
+### Display Library: reusable Inventory, Table and Badge displays
 
-Design management stays in StreamPulse, not Companion. Use the existing Tracker actions to operate progress on air:
+Design management stays in StreamPulse, not Companion. Choose **Table** to arrange schedule rows/columns (including linked Person fields), or **Badge** to design reusable person/member cards. Badge styling now lives in Display Library rather than the overlay inspector. Place these designs as Saved Displays and choose all rows, active entry, occupied slots, grouped entries or explicitly ordered rows as appropriate. Existing Variable Set assign/advance/group actions change the data being followed; they do not edit the shared design.
+
+For Inventory progress, use the existing Tracker actions:
 
 1. In StreamPulse, create an Inventory catalog and a Person Variable Set with a Tracker (checklist) field targeting that catalog. Give each Person their own roster entry. In a Schedule set, link the P1 and P2 roles to the appropriate Person entries.
 2. Open `/variable-displays.html` and save an Inventory design for that catalog. Configure its image/label fields, item ordering, groups/sections, flow grid or fixed cells, and styling there.
