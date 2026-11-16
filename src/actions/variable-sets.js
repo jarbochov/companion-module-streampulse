@@ -1,4 +1,4 @@
-const { setOption, trackerChoices } = require('../variable-sets')
+const { setOption, trackerChoices, entryFieldChoices } = require('../variable-sets')
 
 module.exports = function (self, run) {
 	const text = (id, label, defaultValue = '') => ({
@@ -45,6 +45,110 @@ module.exports = function (self, run) {
 		callback: async ({ options }) => run(() => control(options.set, action, { mode: options.mode }))(),
 	})
 	const rotation = (name, action) => simple(`Rotation ${name}`, `rotation/${action}`)
+	const parsed = (value) => self.parseVariablesInString(String(value ?? ''))
+	const parseJson = (value, label) => {
+		try {
+			return JSON.parse(value)
+		} catch {
+			throw new Error(`${label} must be valid JSON`)
+		}
+	}
+	const expected = async (options, body) => {
+		const value = await parsed(options.expected)
+		if (value.trim()) body.expected = parseJson(value, 'Expected value')
+	}
+	const entryId = async (options) => {
+		const id = await parsed(options.entry)
+		if (!id.trim()) throw new Error('Enter an entry ID')
+		return id
+	}
+	const entryField = (action) => {
+		const numericOnly = action === 'step'
+		const choices = entryFieldChoices(self.state.variableSets, numericOnly)
+		const options = [
+			{ id: 'field', type: 'dropdown', label: 'Set / field', choices, default: choices[0].id },
+			entry('Entry ID'),
+		]
+		if (numericOnly) options.push(text('delta', 'Change', '1'))
+		else {
+			options.push(
+				{
+					id: 'format',
+					type: 'dropdown',
+					label: 'Value format',
+					default: 'text',
+					choices: [
+						{ id: 'text', label: 'Text' },
+						{ id: 'json', label: 'JSON (numbers, booleans, arrays or objects)' },
+					],
+				},
+				text('value', 'Value'),
+			)
+		}
+		options.push(text('expected', 'Expected current value (optional JSON)'))
+		return {
+			name: `Variable Set: ${numericOnly ? 'Step entry number' : 'Set entry field'}`,
+			description: numericOnly ? 'Atomically add to a numeric entry field' : 'Set one entry field or property',
+			options,
+			callback: async ({ options }) =>
+				run(async () => {
+					const choice = entryFieldChoices(self.state.variableSets, numericOnly).find(
+						(candidate) => candidate.id === options.field,
+					)
+					if (!choice?.id) throw new Error('Select an available entry field')
+					const [set, kind, field] = JSON.parse(choice.id)
+					const body = { entry: await entryId(options), [kind]: field }
+					if (numericOnly) {
+						const delta = await parsed(options.delta)
+						if (!delta.trim() || !Number.isFinite(Number(delta))) throw new Error('Change must be a number')
+						body.delta = Number(delta)
+					} else {
+						const value = await parsed(options.value)
+						if (options.format === 'text') body.value = value
+						else if (options.format === 'json') body.value = parseJson(value, 'Value')
+						else throw new Error('Select a value format')
+					}
+					await expected(options, body)
+					await control(set, `entry/${action}`, body)
+				})(),
+		}
+	}
+	const entryAdd = {
+		name: 'Variable Set: Add entry',
+		description: 'Add a roster entry with an optional JSON object for additional values and tiers',
+		options: [
+			setOption(self),
+			entry('Entry ID'),
+			text('label', 'Label'),
+			text('details', 'Additional entry properties (optional JSON object)'),
+		],
+		callback: async ({ options }) =>
+			run(async () => {
+				const details = await parsed(options.details)
+				const data = details.trim() ? parseJson(details, 'Additional entry properties') : {}
+				if (!data || Array.isArray(data) || typeof data !== 'object')
+					throw new Error('Additional entry properties must be an object')
+				const body = { entry: { ...data, id: await entryId(options), label: await parsed(options.label) } }
+				await control(options.set, 'entry/add', body)
+			})(),
+	}
+	const entryRemove = {
+		name: 'Variable Set: Remove entry',
+		description: 'Remove a roster entry when it has no blocking dependencies',
+		options: [
+			setOption(self),
+			entry('Entry ID'),
+			text('expected', 'Expected whole entry (optional JSON object)'),
+			{ id: 'confirm', type: 'checkbox', label: 'Confirm removal', default: false },
+		],
+		callback: async ({ options }) =>
+			run(async () => {
+				if (!options.confirm) throw new Error('Confirm entry removal')
+				const body = { entry: await entryId(options) }
+				await expected(options, body)
+				await control(options.set, 'entry/remove', body)
+			})(),
+	}
 	const tracker = (name, action, withTarget = true) => {
 		const choices = trackerChoices(self.state.variableSets, withTarget)
 		const scopes = [
@@ -111,6 +215,10 @@ module.exports = function (self, run) {
 			[text('from', 'From slot number or name', '1'), text('to', 'To slot number or name', '2')],
 			['from', 'to'],
 		),
+		variable_set_entry_set: entryField('set'),
+		variable_set_entry_step: entryField('step'),
+		variable_set_entry_add: entryAdd,
+		variable_set_entry_remove: entryRemove,
 		variable_set_entry_toggle: {
 			name: 'Variable Set: Toggle or set entry enabled',
 			description: 'Toggle, enable or disable a roster entry for cycling and rotation',

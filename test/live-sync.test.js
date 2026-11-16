@@ -452,4 +452,9 @@ test('tracker choices refresh when fields or catalog entries change', async () =
 	})
 	assert.equal(instance.actions.variable_set_tracker_set.options[0].choices[0].label, 'Players / Completion / Beta')
 	assert.equal(instance.actions.variable_set_tracker_reset.options[0].choices[0].label, 'Players / Completion')
+	instance.handleWebSocketMessage({
+		type: 'variables-update',
+		data: { sets: [{ ...owner, fields: [{ id: 'points', type: 'number', label: 'Points' }] }, catalog] },
+	})
+	assert.equal(instance.actions.variable_set_entry_step.options[0].choices[0].label, 'Players / Points')
 })

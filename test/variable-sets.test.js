@@ -131,6 +131,61 @@ test('tracker actions select discovered fields and items and address entry, slot
 	assert.equal(self.polls, 5)
 })
 
+test('entry actions target one field or property and support atomic steps and guarded roster changes', async () => {
+	const self = mock()
+	self.state.variableSets[0].fields = [
+		{ id: 'score', label: 'Score', type: 'number' },
+		{ id: 'team', label: 'Team', type: 'ref' },
+		{ id: 'progress', label: 'Progress', type: 'checklist' },
+	]
+	defineActions(self)
+	const field = (kind, id) => JSON.stringify(['casters', kind, id])
+	const choices = self.actions.variable_set_entry_set.options[0].choices
+	assert.ok(choices.some((choice) => choice.id === field('field', 'team')))
+	assert.ok(choices.some((choice) => choice.id === field('property', 'enabled')))
+	assert.ok(!choices.some((choice) => choice.id === field('field', 'progress')))
+	assert.deepEqual(self.actions.variable_set_entry_step.options[0].choices, [
+		{ id: field('field', 'score'), label: 'Casters / Score' },
+	])
+	const invoke = (id, options) => self.actions[`variable_set_entry_${id}`].callback({ options })
+	await invoke('set', { field: field('field', 'team'), entry: '$(test:entry)', format: 'text', value: 'blue' })
+	await invoke('set', {
+		field: field('property', 'enabled'),
+		entry: 'alex',
+		format: 'json',
+		value: 'false',
+		expected: 'true',
+	})
+	await invoke('set', {
+		field: field('field', 'team'),
+		entry: 'alex',
+		format: 'json',
+		value: '["one","two"]',
+		expected: '"old"',
+	})
+	await invoke('step', { field: field('field', 'score'), entry: 'alex', delta: '-1.5', expected: '3' })
+	await invoke('add', { set: 'casters', entry: 'new', label: 'New', details: '{"values":{"score":2},"inGroup":false}' })
+	await invoke('remove', { set: 'casters', entry: 'new', confirm: true, expected: '{"id":"new"}' })
+	assert.deepEqual(self.calls, [
+		['casters', 'entry/set', { entry: 'Alex', field: 'team', value: 'blue' }],
+		['casters', 'entry/set', { entry: 'alex', property: 'enabled', value: false, expected: true }],
+		['casters', 'entry/set', { entry: 'alex', field: 'team', value: ['one', 'two'], expected: 'old' }],
+		['casters', 'entry/step', { entry: 'alex', field: 'score', delta: -1.5, expected: 3 }],
+		['casters', 'entry/add', { entry: { id: 'new', label: 'New', values: { score: 2 }, inGroup: false } }],
+		['casters', 'entry/remove', { entry: 'new', expected: { id: 'new' } }],
+	])
+	await assert.rejects(invoke('remove', { set: 'casters', entry: 'alex', confirm: false }), /Confirm entry removal/)
+	await assert.rejects(
+		invoke('set', { field: field('field', 'team'), entry: 'alex', format: 'json', value: '{' }),
+		/valid JSON/,
+	)
+	await assert.rejects(
+		invoke('step', { field: field('field', 'score'), entry: 'alex', delta: '' }),
+		/Change must be a number/,
+	)
+	assert.equal(self.calls.length, 6)
+})
+
 test('Variable Set actions use discovered choices and correct command payloads', async () => {
 	const self = mock()
 	defineActions(self)

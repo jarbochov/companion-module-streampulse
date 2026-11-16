@@ -115,7 +115,7 @@ async function overlayPatch(api, overlays, previousPages = {}, previousSpeakers 
 	return { pages, ...(speakers ? { speakers: badges } : {}) }
 }
 
-const { trackerChoices } = require('./variable-sets')
+const { trackerChoices, entryFieldChoices } = require('./variable-sets')
 
 function choiceSignature(state) {
 	return JSON.stringify([
@@ -124,6 +124,8 @@ function choiceSignature(state) {
 		(state.variableSets || []).map((set) => [set.id, set.name]),
 		trackerChoices(state.variableSets),
 		trackerChoices(state.variableSets, true),
+		entryFieldChoices(state.variableSets),
+		entryFieldChoices(state.variableSets, true),
 		state.rules.map((r) => [r.id, r.name]),
 		...['slideshows', 'videos', 'cutouts'].map((key) =>
 			(state[key] || []).map((item) => [item.overlayId, item.elementId, item.name]),
