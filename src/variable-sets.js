@@ -45,7 +45,8 @@ const entryFieldChoices = (sets, numericOnly = false) => {
 		}
 		for (const field of set.fields || []) {
 			const fieldId = field.id || field.key
-			if (!fieldId || field.type === 'checklist' || (numericOnly && field.type !== 'number')) continue
+			if (!fieldId || field.type === 'checklist' || (numericOnly && !['number', 'counter'].includes(field.type)))
+				continue
 			choices.push({
 				id: JSON.stringify([set.id, 'field', fieldId]),
 				label: `${name} / ${field.label || field.name || fieldId}`,

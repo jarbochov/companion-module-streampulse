@@ -53,9 +53,32 @@ module.exports = function (self, run) {
 			throw new Error(`${label} must be valid JSON`)
 		}
 	}
-	const expected = async (options, body) => {
+	const object = (value, label) => {
+		if (!value || Array.isArray(value) || typeof value !== 'object') throw new Error(`${label} must be an object`)
+		return value
+	}
+	const fieldValue = (set, kind, key, value, label) => {
+		if (kind === 'property' && ['enabled', 'inGroup'].includes(key)) {
+			if ([true, 'true', 1, '1'].includes(value)) return true
+			if ([false, 'false', 0, '0'].includes(value)) return false
+			throw new Error(`${label} must be true or false`)
+		}
+		const field = (set.fields || []).find((field) => (field.id || field.key) === key)
+		if (kind === 'field' && !field) throw new Error(`Unknown entry field: ${key}`)
+		if (field?.type === 'ref_list') {
+			const items = typeof value === 'string' ? parseJson(value, label) : value
+			if (!Array.isArray(items) || items.some((item) => typeof item !== 'string'))
+				throw new Error(`${label} must be an array of entry IDs`)
+			return items
+		}
+		if (field?.type === 'checklist') return object(value, label)
+		if (value === null || typeof value === 'object') throw new Error(`${label} must be text, a number or a boolean`)
+		// Set fields are stored as strings; roster flags are stored as booleans.
+		return String(value)
+	}
+	const expected = async (options, body, normalize = (value) => value) => {
 		const value = await parsed(options.expected)
-		if (value.trim()) body.expected = parseJson(value, 'Expected value')
+		if (value.trim()) body.expected = normalize(parseJson(value, 'Expected value'))
 	}
 	const entryId = async (options) => {
 		const id = await parsed(options.entry)
@@ -97,6 +120,7 @@ module.exports = function (self, run) {
 					)
 					if (!choice?.id) throw new Error('Select an available entry field')
 					const [set, kind, field] = JSON.parse(choice.id)
+					const setObj = self.state.variableSets.find((candidate) => candidate.id === set)
 					const body = { entry: await entryId(options), [kind]: field }
 					if (numericOnly) {
 						const delta = await parsed(options.delta)
@@ -104,14 +128,48 @@ module.exports = function (self, run) {
 						body.delta = Number(delta)
 					} else {
 						const value = await parsed(options.value)
-						if (options.format === 'text') body.value = value
-						else if (options.format === 'json') body.value = parseJson(value, 'Value')
+						if (options.format === 'text') body.value = fieldValue(setObj, kind, field, value, 'Value')
+						else if (options.format === 'json')
+							body.value = fieldValue(setObj, kind, field, parseJson(value, 'Value'), 'Value')
 						else throw new Error('Select a value format')
 					}
-					await expected(options, body)
+					await expected(options, body, (value) => fieldValue(setObj, kind, field, value, 'Expected value'))
 					await control(set, `entry/${action}`, body)
 				})(),
 		}
+	}
+	const entryUpdate = {
+		name: 'Variable Set: Update entry',
+		description: 'Atomically update one entry using a JSON patch and optional expected whole entry',
+		options: [
+			setOption(self),
+			entry('Entry ID'),
+			text('patch', 'Entry patch (JSON object)', '{"values":{}}'),
+			text('expected', 'Expected whole entry (optional JSON object)'),
+		],
+		callback: async ({ options }) =>
+			run(async () => {
+				const set = (self.state.variableSets || []).find((candidate) => candidate.id === options.set)
+				if (!set) throw new Error('Select an available Variable Set')
+				const patch = object(parseJson(await parsed(options.patch), 'Entry patch'), 'Entry patch')
+				for (const key of Object.keys(patch)) {
+					if (!['label', 'enabled', 'inGroup', 'values', 'tiers'].includes(key))
+						throw new Error(`Unsupported entry patch property: ${key}`)
+				}
+				if (Object.hasOwn(patch, 'values')) {
+					object(patch.values, 'Entry values')
+					for (const key of Object.keys(patch.values)) {
+						patch.values[key] = fieldValue(set, 'field', key, patch.values[key], `Value for ${key}`)
+					}
+				}
+				for (const key of ['label', 'enabled', 'inGroup']) {
+					if (Object.hasOwn(patch, key)) patch[key] = fieldValue(set, 'property', key, patch[key], key)
+				}
+				if (Object.hasOwn(patch, 'tiers') && !Array.isArray(patch.tiers)) throw new Error('Tiers must be an array')
+				const body = { entry: await entryId(options), patch }
+				await expected(options, body, (value) => object(value, 'Expected whole entry'))
+				await control(options.set, 'entry/update', body)
+			})(),
 	}
 	const entryAdd = {
 		name: 'Variable Set: Add entry',
@@ -145,7 +203,7 @@ module.exports = function (self, run) {
 			run(async () => {
 				if (!options.confirm) throw new Error('Confirm entry removal')
 				const body = { entry: await entryId(options) }
-				await expected(options, body)
+				await expected(options, body, (value) => object(value, 'Expected whole entry'))
 				await control(options.set, 'entry/remove', body)
 			})(),
 	}
@@ -216,6 +274,7 @@ module.exports = function (self, run) {
 			['from', 'to'],
 		),
 		variable_set_entry_set: entryField('set'),
+		variable_set_entry_update: entryUpdate,
 		variable_set_entry_step: entryField('step'),
 		variable_set_entry_add: entryAdd,
 		variable_set_entry_remove: entryRemove,

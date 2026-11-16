@@ -135,7 +135,9 @@ test('entry actions target one field or property and support atomic steps and gu
 	const self = mock()
 	self.state.variableSets[0].fields = [
 		{ id: 'score', label: 'Score', type: 'number' },
+		{ key: 'wins', label: 'Wins', type: 'counter' },
 		{ id: 'team', label: 'Team', type: 'ref' },
+		{ key: 'lineup', label: 'Lineup', type: 'ref_list' },
 		{ id: 'progress', label: 'Progress', type: 'checklist' },
 	]
 	defineActions(self)
@@ -146,6 +148,7 @@ test('entry actions target one field or property and support atomic steps and gu
 	assert.ok(!choices.some((choice) => choice.id === field('field', 'progress')))
 	assert.deepEqual(self.actions.variable_set_entry_step.options[0].choices, [
 		{ id: field('field', 'score'), label: 'Casters / Score' },
+		{ id: field('field', 'wins'), label: 'Casters / Wins' },
 	])
 	const invoke = (id, options) => self.actions[`variable_set_entry_${id}`].callback({ options })
 	await invoke('set', { field: field('field', 'team'), entry: '$(test:entry)', format: 'text', value: 'blue' })
@@ -157,11 +160,11 @@ test('entry actions target one field or property and support atomic steps and gu
 		expected: 'true',
 	})
 	await invoke('set', {
-		field: field('field', 'team'),
+		field: field('field', 'lineup'),
 		entry: 'alex',
 		format: 'json',
 		value: '["one","two"]',
-		expected: '"old"',
+		expected: '["old"]',
 	})
 	await invoke('step', { field: field('field', 'score'), entry: 'alex', delta: '-1.5', expected: '3' })
 	await invoke('add', { set: 'casters', entry: 'new', label: 'New', details: '{"values":{"score":2},"inGroup":false}' })
@@ -169,8 +172,8 @@ test('entry actions target one field or property and support atomic steps and gu
 	assert.deepEqual(self.calls, [
 		['casters', 'entry/set', { entry: 'Alex', field: 'team', value: 'blue' }],
 		['casters', 'entry/set', { entry: 'alex', property: 'enabled', value: false, expected: true }],
-		['casters', 'entry/set', { entry: 'alex', field: 'team', value: ['one', 'two'], expected: 'old' }],
-		['casters', 'entry/step', { entry: 'alex', field: 'score', delta: -1.5, expected: 3 }],
+		['casters', 'entry/set', { entry: 'alex', field: 'lineup', value: ['one', 'two'], expected: ['old'] }],
+		['casters', 'entry/step', { entry: 'alex', field: 'score', delta: -1.5, expected: '3' }],
 		['casters', 'entry/add', { entry: { id: 'new', label: 'New', values: { score: 2 }, inGroup: false } }],
 		['casters', 'entry/remove', { entry: 'new', expected: { id: 'new' } }],
 	])
@@ -184,6 +187,114 @@ test('entry actions target one field or property and support atomic steps and gu
 		/Change must be a number/,
 	)
 	assert.equal(self.calls.length, 6)
+})
+
+test('entry updates preserve typed arrays and whole-entry expectations while scalar fields use stored strings', async () => {
+	const self = mock()
+	self.state.variableSets[0].fields = [
+		{ key: 'score', type: 'counter' },
+		{ key: 'visible', type: 'toggle' },
+		{ key: 'lineup', type: 'ref_list' },
+		{ key: 'progress', type: 'checklist' },
+	]
+	defineActions(self)
+	const field = (kind, key) => JSON.stringify(['casters', kind, key])
+	const invoke = (id, options) => self.actions[`variable_set_entry_${id}`].callback({ options })
+	await invoke('set', { field: field('field', 'score'), entry: 'alex', format: 'json', value: '4', expected: '3' })
+	await invoke('set', {
+		field: field('field', 'visible'),
+		entry: 'alex',
+		format: 'json',
+		value: 'false',
+		expected: 'true',
+	})
+	await invoke('set', {
+		field: field('property', 'inGroup'),
+		entry: 'alex',
+		format: 'text',
+		value: 'false',
+		expected: '"true"',
+	})
+	const expected = { id: 'alex', label: 'Alex', enabled: true, inGroup: false, values: { score: '4' } }
+	await invoke('update', {
+		set: 'casters',
+		entry: 'alex',
+		patch: '{"values":{"score":5,"visible":true,"lineup":["sam","alex"],"progress":{"badge":2}},"enabled":"false"}',
+		expected: JSON.stringify(expected),
+	})
+	assert.deepEqual(self.calls, [
+		['casters', 'entry/set', { entry: 'alex', field: 'score', value: '4', expected: '3' }],
+		['casters', 'entry/set', { entry: 'alex', field: 'visible', value: 'false', expected: 'true' }],
+		['casters', 'entry/set', { entry: 'alex', property: 'inGroup', value: false, expected: true }],
+		[
+			'casters',
+			'entry/update',
+			{
+				entry: 'alex',
+				patch: {
+					values: { score: '5', visible: 'true', lineup: ['sam', 'alex'], progress: { badge: 2 } },
+					enabled: false,
+				},
+				expected,
+			},
+		],
+	])
+	const before = self.calls.length
+	for (const patch of ['[]', '{"id":"other"}', '{"values":null}', '{"values":{"lineup":[1]}}', '{"tiers":{}}']) {
+		await assert.rejects(invoke('update', { set: 'casters', entry: 'alex', patch }))
+	}
+	await assert.rejects(
+		invoke('update', { set: 'casters', entry: 'alex', patch: '{}', expected: '[]' }),
+		/must be an object/,
+	)
+	await assert.rejects(
+		invoke('set', { field: field('property', 'enabled'), entry: 'alex', format: 'text', value: 'maybe' }),
+		/true or false/,
+	)
+	assert.equal(self.calls.length, before, 'Invalid typed values must not send an action')
+})
+
+test('entry API transports structured values unchanged and retains conflict and dependency details', async () => {
+	const originalFetch = global.fetch
+	const calls = []
+	let status = 200
+	let result = { id: 'casters', roster: [] }
+	global.fetch = async (url, options) => {
+		calls.push([url, options.method, JSON.parse(options.body), options.headers])
+		return { ok: status < 400, status, text: async () => JSON.stringify(result) }
+	}
+	try {
+		const api = new StreamPulseApi('localhost', 3000)
+		const body = {
+			entry: 'alex',
+			patch: { values: { lineup: ['sam', 'alex'] }, enabled: false },
+			expected: { id: 'alex', values: { lineup: ['alex', 'sam'] } },
+		}
+		assert.deepEqual(await api.variableSetControl('show / one', 'entry/update', body), result)
+		assert.deepEqual(calls[0], [
+			'http://localhost:3000/api/variables/sets/show%20%2F%20one/entry/update',
+			'POST',
+			body,
+			{ 'Content-Type': 'application/json' },
+		])
+		status = 409
+		result = { error: 'Changed elsewhere', code: 'conflict', current: '5' }
+		await assert.rejects(
+			api.variableSetControl('casters', 'entry/set', { entry: 'alex', field: 'score', value: '4', expected: '3' }),
+			(error) => error.status === 409 && error.code === 'conflict' && error.current === '5',
+		)
+		result = {
+			error: 'Remove references first',
+			code: 'dependencies',
+			dependencies: [{ kind: 'display', id: 'cards', label: 'Guest cards' }],
+		}
+		await assert.rejects(
+			api.variableSetControl('casters', 'entry/remove', { entry: 'alex' }),
+			(error) => error.status === 409 && error.dependencies[0].label === 'Guest cards',
+		)
+	} finally {
+		global.fetch = originalFetch
+	}
 })
 
 test('Variable Set actions use discovered choices and correct command payloads', async () => {

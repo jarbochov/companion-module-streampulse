@@ -17,7 +17,13 @@ class StreamPulseApi {
 		} catch {
 			data = null
 		}
-		if (!res.ok) throw new Error((data && data.error) || `HTTP ${res.status}`)
+		if (!res.ok)
+			throw Object.assign(new Error((data && data.error) || `HTTP ${res.status}`), {
+				status: res.status,
+				...(data?.code ? { code: data.code } : {}),
+				...(data && Object.hasOwn(data, 'current') ? { current: data.current } : {}),
+				...(Array.isArray(data?.dependencies) ? { dependencies: data.dependencies } : {}),
+			})
 		return data
 	}
 
