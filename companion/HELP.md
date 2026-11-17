@@ -113,6 +113,8 @@ Milestone estimates are available as `milestone_stream_estimate_days`, `mileston
 
 Same-viewer subscription notifications within two minutes share one count and alert; later shared messages enrich tenure without replaying the alert. Native Twitch gift batches preserve their full count. While native gift delivery is active, SSN adds pending recipient details without generating duplicate alerts; otherwise SSN remains the fallback. Anonymous gifts are attributed to Anonymous, not the recipient. Existing queue/replay controls and variable IDs are unchanged; historical alerts are not rewritten.
 
+Prime/paid alert selection uses explicit native chat-notification `is_prime` or SSN's Prime announcement details. Native tier `1000` alone cannot distinguish them. With native chat announcements or SSN available, basic events update counts/goals immediately, while renewal alerts wait for an announcement/shared resub. Native chat notifications use `user:read:chat`; SSN remains a source of details. No new Companion action or variable ID is required.
+
 **Community insights:** `community_insights_status` and the matching feedback show `off`, `scanning`, `ready`, `error` or `unavailable`. Status refreshes every 30 seconds and becomes unavailable when StreamPulse or its status endpoint cannot be reached. Enable tracking in StreamPulse Config Editor and configure individual messages in Chat Bot; no per-person data is exposed.
 
 Stream title/category variables retain current Twitch metadata while offline. Updated StreamPulse records title/category history only during live broadcasts, with one starting state at the actual broadcast start. No action or variable IDs change.

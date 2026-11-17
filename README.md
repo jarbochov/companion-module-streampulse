@@ -41,6 +41,8 @@ Trivia's saved Reveal Delay waits after the countdown reaches zero; voting close
 
 Updated StreamPulse coalesces same-viewer subscription notifications for two minutes without blocking other viewers. Native Twitch gift batches retain their full count; SSN only enriches pending gift alerts while native delivery is active, avoiding duplicate or recipient-as-giver alerts. Queue/replay actions and variable IDs are unchanged; old history is not rewritten.
 
+Prime alert selection uses native Twitch chat announcements (`is_prime`) or SSN's explicit Prime subscription announcements, not ambiguous native tier `1000`. With announcement delivery available, basic events still update counts/goals immediately, but renewals alert when announced/shared rather than silently. Native chat announcements use `user:read:chat`; SSN remains a source of subscription details. No module actions or variable IDs change.
+
 **Community insights:** the `community_insights_status` variable and matching status feedback report `off`, `scanning`, `ready`, `error` or `unavailable`. Status is checked every 30 seconds; tracking and chat messages remain configured in StreamPulse. No individual dossier data is exposed through these controls.
 
 Stream title and category variables keep showing current Twitch channel metadata while offline. Session title/category history on updated StreamPulse is live-only, beginning once at the actual broadcast start.
