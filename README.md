@@ -43,6 +43,8 @@ Updated StreamPulse coalesces same-viewer subscription notifications for two min
 
 Prime alert selection uses native Twitch chat announcements (`is_prime`) or SSN's explicit Prime subscription announcements, not ambiguous native tier `1000`. With announcement delivery available, basic events still update counts/goals immediately, but renewals alert when announced/shared rather than silently. Native chat announcements use `user:read:chat`; SSN remains a source of subscription details. No module actions or variable IDs change.
 
+**Historical alert repair:** updated StreamPulse provides administrative `POST /api/alerts/history/correct` with dry-run, full-record conflict checks, JSON backup and original-record audit. This only repairs saved event metadata/duplicate markers; it does not replay, change counts/rules/queue or send live updates. Refresh Studio/OBS queue dock after repair. Duplicate event replay is blocked; explicit canonical event replay uses corrected data, while recent/exact-alert replay still uses the separate original playback history. This maintenance operation has no GET trigger, module action or new variable; use StreamPulse's in-app Docs/API preview/apply procedure, not a live replay button.
+
 **Community insights:** the `community_insights_status` variable and matching status feedback report `off`, `scanning`, `ready`, `error` or `unavailable`. Status is checked every 30 seconds; tracking and chat messages remain configured in StreamPulse. No individual dossier data is exposed through these controls.
 
 Stream title and category variables keep showing current Twitch channel metadata while offline. Session title/category history on updated StreamPulse is live-only, beginning once at the actual broadcast start.
