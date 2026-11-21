@@ -51,6 +51,10 @@ const STATIC_VARS = {
 	obs_scene: 'OBS current program scene',
 	obs_last_error: 'OBS most recent connection error',
 	obs_active_engine: 'OBS Scene Sync active motion engine',
+	obs_border_profile_id: 'OBS Border: active default profile ID',
+	obs_border_profile: 'OBS Border: active default profile name',
+	obs_pattern_profile_id: 'OBS Pattern: active default profile ID',
+	obs_pattern_profile: 'OBS Pattern: active default profile name',
 	music_overlay: 'Music overlay (visible / hidden)',
 	viewers_average: 'Average viewers this session',
 	stream_uptime: 'Time since the stream went live (H:MM:SS)',
@@ -282,6 +286,14 @@ function updateVariables(self) {
 	values.obs_scene = obs?.currentProgramScene || ''
 	values.obs_last_error = obs?.lastError || ''
 	values.obs_active_engine = obs?.activeEngine || ''
+	for (const [prefix, studio] of [
+		['obs_border', self.state.obsBorders],
+		['obs_pattern', self.state.obsPatterns],
+	]) {
+		const active = self.state.online === false ? null : studio
+		values[`${prefix}_profile_id`] = active?.activeProfileId || ''
+		values[`${prefix}_profile`] = active?.profiles?.find((profile) => profile.id === active.activeProfileId)?.name || ''
+	}
 	for (const speaker of self.state.speakers || []) {
 		const prefix = speakerVariablePrefix(speaker)
 		for (const [suffix, [field]] of Object.entries(SPEAKER_VARS)) {

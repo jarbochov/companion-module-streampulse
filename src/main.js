@@ -35,6 +35,8 @@ function initialState() {
 		tierListPresets: [],
 		trivia: null,
 		triviaPresets: [],
+		obsBorders: null,
+		obsPatterns: null,
 	}
 }
 
@@ -192,6 +194,10 @@ class ModuleInstance extends InstanceBase {
 			this.applyPatch({ goals: data.items })
 		} else if (msg.type === 'variables-update' && Array.isArray(data.sets)) {
 			this.applyPatch({ variableSets: data.sets })
+		} else if (msg.type === 'obs-borders-update' && Array.isArray(data.profiles)) {
+			this.applyPatch({ obsBorders: data })
+		} else if (msg.type === 'obs-patterns-update' && Array.isArray(data.profiles)) {
+			this.applyPatch({ obsPatterns: data })
 		} else if (['alert', 'alert-skip', 'alert-clear'].includes(msg.type)) {
 			this.scheduleRefresh('alerts')
 		} else if (msg.type === 'custom-overlay-page' && data.id) {

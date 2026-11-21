@@ -14,6 +14,7 @@ const BLUE = 0x1a73e8
 const WHITE = 0xffffff
 const { obsConnectionStatus, communityInsightsStatus } = require('./api')
 const { setOption } = require('./variable-sets')
+const { profileChoices: obsProfileChoices } = require('./actions/obs-studios')
 const {
 	PROFILE_FIELDS,
 	VISIBILITY_FIELDS,
@@ -142,6 +143,38 @@ module.exports = async function (self) {
 				const obs = self.state.status?.obs
 				return self.state.online !== false && !!obs && obs.sceneSyncEnabled === options.enabled
 			},
+		},
+		obs_border_active_profile: {
+			name: 'OBS Border: active default profile',
+			type: 'boolean',
+			defaultStyle: { bgcolor: GREEN, color: WHITE },
+			options: [
+				{
+					id: 'profile',
+					type: 'dropdown',
+					label: 'Profile',
+					choices: obsProfileChoices(self.state.obsBorders),
+					default: obsProfileChoices(self.state.obsBorders)[0].id,
+				},
+			],
+			callback: ({ options }) =>
+				self.state.online !== false && !!options.profile && self.state.obsBorders?.activeProfileId === options.profile,
+		},
+		obs_pattern_active_profile: {
+			name: 'OBS Pattern: active default profile',
+			type: 'boolean',
+			defaultStyle: { bgcolor: GREEN, color: WHITE },
+			options: [
+				{
+					id: 'profile',
+					type: 'dropdown',
+					label: 'Profile',
+					choices: obsProfileChoices(self.state.obsPatterns),
+					default: obsProfileChoices(self.state.obsPatterns)[0].id,
+				},
+			],
+			callback: ({ options }) =>
+				self.state.online !== false && !!options.profile && self.state.obsPatterns?.activeProfileId === options.profile,
 		},
 		speaker_visibility: {
 			name: 'Speaker Badge: detail visible / enabled',

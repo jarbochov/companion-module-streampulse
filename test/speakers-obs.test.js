@@ -427,3 +427,37 @@ test('missing speaker state is safe and preset IDs are stable as profiles change
 	assert.ok(!Object.keys(self.values).some((key) => key.startsWith('speaker_')))
 	assert.equal(Object.keys(speakerPresets(self)).length, 2)
 })
+
+test('OBS studio actions, active profile feedback and variables use live studio state', async () => {
+	const self = createModuleMock()
+	self.state.obsBorders = { activeProfileId: 'border', profiles: [{ id: 'border', name: 'Glow' }] }
+	self.state.obsPatterns = { activeProfileId: 'pattern', profiles: [{ id: 'pattern', name: 'Stars' }] }
+	const calls = []
+	self.api.request = async (...args) => {
+		calls.push(args)
+	}
+	const run = (fn) => async () => fn()
+	const actions = require('../src/actions/obs-studios')(self, run)
+	assert.equal(actions.obs_pattern_activate.options[0].choices[0].label, 'Stars')
+	await actions.obs_pattern_activate.callback({
+		options: { profile: 'pattern', target: '$(test:name)', scene: 'Main' },
+	})
+	await actions.obs_border_standby.callback({ options: { profile: 'border', enabled: '0' } })
+	assert.deepEqual(calls, [
+		[
+			'/api/obs-patterns/activate',
+			{ method: 'POST', body: { profileId: 'pattern', sourceName: 'Casey Park', sceneName: 'Main' } },
+		],
+		['/api/obs-borders/standby', { method: 'POST', body: { profileId: 'border', enabled: '0' } }],
+	])
+	await defineFeedbacks(self)
+	defineVariables(self)
+	updateVariables(self)
+	assert.equal(self.values.obs_pattern_profile, 'Stars')
+	assert.equal(self.values.obs_border_profile_id, 'border')
+	assert.equal(self.feedbacks.obs_pattern_active_profile.callback({ options: { profile: 'pattern' } }), true)
+	self.state.online = false
+	updateVariables(self)
+	assert.equal(self.values.obs_pattern_profile, '')
+	assert.equal(self.feedbacks.obs_pattern_active_profile.callback({ options: { profile: 'pattern' } }), false)
+})

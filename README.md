@@ -37,6 +37,8 @@ Trivia's saved Reveal Delay waits after the countdown reaches zero; voting close
 
 **OBS health:** connection, connecting, connection status, Scene Sync enablement, current program scene, active motion engine and last error variables, plus connection/Scene Sync feedbacks and status presets. These use the existing `/api/status` snapshot, not extra OBS polling. OBS audio works for speaker badges without enabling Scene Sync; high-frequency audio meters are not exposed as Companion variables.
 
+**OBS Border and Pattern Studios:** activate a default profile or assign one to an OBS source and optional scene; Border also supports standby on, off, or toggle. Source assignments support None (Border) or Auto (Pattern), and scene overrides support Inherit. Profile lists refresh on discovery and live updates. Active default profile ID/name variables and matching feedbacks are available for both studios.
+
 **Session subscribers:** `chat_subscribers` includes new and returning subscribers recorded by updated StreamPulse from native Twitch EventSub or SocialStream Ninja. No shared chat message is required for native notifications; nearby duplicate notifications share one count. The variable name is unchanged.
 
 Updated StreamPulse coalesces same-viewer subscription notifications for two minutes without blocking other viewers. Native Twitch gift batches retain their full count; SSN only enriches pending gift alerts while native delivery is active, avoiding duplicate or recipient-as-giver alerts. Queue/replay actions and variable IDs are unchanged; old history is not rewritten.

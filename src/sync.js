@@ -46,6 +46,8 @@ function jobsFor(api, groups, wanted = []) {
 	if (wanted.length) add('live', async () => ({ placeholders: await api.placeholders() }))
 	add('discovery', async () => ({ overlayList: await api.overlays() }))
 	add('discovery', async () => ({ communityInsights: await api.communityInsightsStatus().catch(() => null) }))
+	add('discovery', async () => ({ obsBorders: await api.request('/api/obs-borders') }))
+	add('discovery', async () => ({ obsPatterns: await api.request('/api/obs-patterns') }))
 	add('discovery', async () => ({ matchupPresets: (await api.matchupPresets()).presets || [] }))
 	add('discovery', async () => ({ pollPresets: (await api.pollPresets()).presets || [] }))
 	add('discovery', async () => ({ tournamentPresets: (await api.tournamentPresets(false)).presets || [] }))
@@ -144,6 +146,9 @@ function choiceSignature(state) {
 		].map((key) => (state[key] || []).map((p) => [p.id, p.name || p.title])),
 		(state.tierList?.items || []).map((item) => [item.id, item.name, item.tierId]),
 		(state.trivia?.questions || []).map((q) => [q.id, q.question, q.done]),
+		...['obsBorders', 'obsPatterns'].map((key) =>
+			(state[key]?.profiles || []).map((profile) => [profile.id, profile.name]),
+		),
 		(state.tournament?.matches || []).map((m) => [
 			m.id,
 			typeof m.entrant1 === 'object' ? m.entrant1?.name : m.entrant1,

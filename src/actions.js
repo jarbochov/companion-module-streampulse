@@ -12,6 +12,7 @@ const variableSetActions = require('./actions/variable-sets')
 const timerGoalActions = require('./actions/timers-goals')
 const productionActions = require('./actions/production')
 const { speakerActions } = require('./speakers')
+const obsStudioActions = require('./actions/obs-studios')
 
 module.exports = function (self) {
 	const run = (fn) => async () => {
@@ -38,5 +39,6 @@ module.exports = function (self) {
 		...speakerActions(self),
 		...triviaActions(self, run),
 		...variableSetActions(self, run),
+		...obsStudioActions(self, run),
 	})
 }
