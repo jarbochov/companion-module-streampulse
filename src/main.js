@@ -37,6 +37,10 @@ function initialState() {
 		triviaPresets: [],
 		obsBorders: null,
 		obsPatterns: null,
+		obsLayout: null,
+		creditSuite: null,
+		operator: null,
+		multiplayerBingo: null,
 	}
 }
 
@@ -56,7 +60,6 @@ class ModuleInstance extends InstanceBase {
 		this.updateActions()
 		this.updateFeedbacks()
 		this.updatePresets()
-		defineVariables(this)
 		defineVariables(this)
 		this.startPolling()
 		this.startWebSocket()
@@ -198,6 +201,31 @@ class ModuleInstance extends InstanceBase {
 			this.applyPatch({ obsBorders: data })
 		} else if (msg.type === 'obs-patterns-update' && Array.isArray(data.profiles)) {
 			this.applyPatch({ obsPatterns: data })
+		} else if (msg.type === 'obs-layout-update' && Array.isArray(data.layouts)) {
+			this.applyPatch({ obsLayout: data })
+		} else if (msg.type === 'credit-suite-update') {
+			const prev = this.state.creditSuite || {}
+			this.applyPatch({
+				creditSuite: {
+					...prev,
+					enabled: true,
+					activeProjectId: data.activeProjectId ?? prev.activeProjectId,
+					...(Array.isArray(data.projects) ? { projects: data.projects } : {}),
+				},
+			})
+		} else if (msg.type === 'credit-suite-transport') {
+			const prev = this.state.creditSuite || {}
+			this.applyPatch({
+				creditSuite: {
+					...prev,
+					enabled: true,
+					transport: data,
+				},
+			})
+		} else if (msg.type === 'operator-update' && Array.isArray(data.profiles)) {
+			this.applyPatch({ operator: data })
+		} else if (msg.type === 'multiplayer-bingo-update' && data.session) {
+			this.applyPatch({ multiplayerBingo: data })
 		} else if (['alert', 'alert-skip', 'alert-clear'].includes(msg.type)) {
 			this.scheduleRefresh('alerts')
 		} else if (msg.type === 'custom-overlay-page' && data.id) {

@@ -5,6 +5,16 @@ function profileChoices(state) {
 		: [{ id: '', label: '(no profiles found)' }]
 }
 
+function layoutChoices(state) {
+	const layouts = state?.layouts || []
+	return layouts.length
+		? layouts.map((layout) => ({
+				id: layout.id,
+				label: layout.sceneName ? `${layout.name || layout.id} (${layout.sceneName})` : layout.name || layout.id,
+			}))
+		: [{ id: '', label: '(no layouts found)' }]
+}
+
 function profileOptions(state, label, special) {
 	const choices = [...profileChoices(state), ...special]
 	return [
@@ -79,7 +89,39 @@ module.exports = function (self, run) {
 					}),
 				)(),
 		},
+		obs_layout_apply: {
+			name: 'OBS Studio: Apply saved scene layout',
+			description: 'Smoothly animate OBS scene sources to a saved OBS Layout Studio preset.',
+			options: [
+				{
+					id: 'layout',
+					type: 'dropdown',
+					label: 'Saved Layout',
+					choices: layoutChoices(self.state.obsLayout),
+					default: layoutChoices(self.state.obsLayout)[0].id,
+				},
+				{
+					id: 'durationMs',
+					type: 'number',
+					label: 'Duration override (ms, 0 = preset default)',
+					default: 0,
+					min: 0,
+					max: 10000,
+				},
+			],
+			callback: async ({ options }) =>
+				run(() => {
+					if (!options.layout) throw new Error('Select a saved OBS layout first')
+					const body = { id: options.layout }
+					if (Number(options.durationMs) > 0) body.durationMs = Number(options.durationMs)
+					return self.api.request('/api/obs-layout/layouts/apply', {
+						method: 'POST',
+						body,
+					})
+				})(),
+		},
 	}
 }
 
 module.exports.profileChoices = profileChoices
+module.exports.layoutChoices = layoutChoices

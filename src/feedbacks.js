@@ -15,6 +15,8 @@ const WHITE = 0xffffff
 const { obsConnectionStatus, communityInsightsStatus } = require('./api')
 const { setOption } = require('./variable-sets')
 const { profileChoices: obsProfileChoices } = require('./actions/obs-studios')
+const { projectChoices: creditSuiteProjectChoices } = require('./actions/credit-suite')
+const { operatorProfileChoices } = require('./actions/operator')
 const {
 	PROFILE_FIELDS,
 	VISIBILITY_FIELDS,
@@ -737,6 +739,64 @@ module.exports = async function (self) {
 				const unplayed = tr?.unplayedCount ?? (tr?.questions ? tr.questions.filter((q) => !q.done).length : 0)
 				return unplayed > 0
 			},
+		},
+		credit_suite_playing: {
+			name: 'Credit Suite: actively playing',
+			type: 'boolean',
+			description: 'True while Credit Suite credits are actively rolling',
+			defaultStyle: { bgcolor: GREEN, color: WHITE },
+			options: [],
+			callback: () => self.state.online !== false && Boolean(self.state.creditSuite?.transport?.playing),
+		},
+		credit_suite_active_project: {
+			name: 'Credit Suite: active project matches',
+			type: 'boolean',
+			description: 'True when the selected Credit Suite project is currently active',
+			defaultStyle: { bgcolor: BLUE, color: WHITE },
+			options: [
+				{
+					id: 'project',
+					type: 'dropdown',
+					label: 'Project',
+					choices: creditSuiteProjectChoices(self.state.creditSuite, false),
+					default: creditSuiteProjectChoices(self.state.creditSuite, false)[0].id,
+				},
+			],
+			callback: ({ options }) =>
+				self.state.online !== false && !!options.project && self.state.creditSuite?.activeProjectId === options.project,
+		},
+		operator_profile_active: {
+			name: 'Operator: active preset board matches',
+			type: 'boolean',
+			description: 'True when the selected Operator Mode preset board is currently active',
+			defaultStyle: { bgcolor: BLUE, color: WHITE },
+			options: [
+				{
+					id: 'profile',
+					type: 'dropdown',
+					label: 'Operator Preset',
+					choices: operatorProfileChoices(self.state.operator),
+					default: operatorProfileChoices(self.state.operator)[0].id,
+				},
+			],
+			callback: ({ options }) =>
+				self.state.online !== false && !!options.profile && self.state.operator?.activeProfileId === options.profile,
+		},
+		multiplayer_bingo_locked: {
+			name: 'Multiplayer Bingo: player stamping locked',
+			type: 'boolean',
+			description: 'True when Multiplayer Bingo player stamping is locked by the host',
+			defaultStyle: { bgcolor: AMBER, color: WHITE },
+			options: [],
+			callback: () => self.state.online !== false && Boolean(self.state.multiplayerBingo?.session?.locked),
+		},
+		multiplayer_bingo_hidden: {
+			name: 'Multiplayer Bingo: overlay hidden',
+			type: 'boolean',
+			description: 'True when the Multiplayer Bingo OBS overlay is hidden',
+			defaultStyle: { bgcolor: RED, color: WHITE },
+			options: [],
+			callback: () => self.state.online !== false && Boolean(self.state.multiplayerBingo?.session?.hidden),
 		},
 	})
 }

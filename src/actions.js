@@ -13,6 +13,9 @@ const timerGoalActions = require('./actions/timers-goals')
 const productionActions = require('./actions/production')
 const { speakerActions } = require('./speakers')
 const obsStudioActions = require('./actions/obs-studios')
+const creditSuiteActions = require('./actions/credit-suite')
+const operatorActions = require('./actions/operator')
+const multiplayerBingoActions = require('./actions/multiplayer-bingo')
 
 module.exports = function (self) {
 	const run = (fn) => async () => {
@@ -40,5 +43,8 @@ module.exports = function (self) {
 		...triviaActions(self, run),
 		...variableSetActions(self, run),
 		...obsStudioActions(self, run),
+		...creditSuiteActions(self, run),
+		...operatorActions(self, run),
+		...multiplayerBingoActions(self, run),
 	})
 }

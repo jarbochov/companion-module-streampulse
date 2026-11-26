@@ -13,6 +13,7 @@ const tournamentPresets = require('./presets/tournaments')
 const tierListPresets = require('./presets/tier-list')
 const triviaPresets = require('./presets/trivia')
 const variableSetPresets = require('./presets/variable-sets')
+const creditSuitePresets = require('./presets/credit-suite')
 const { speakerPresets } = require('./speakers')
 
 module.exports = function (self) {
@@ -33,5 +34,6 @@ module.exports = function (self) {
 		...speakerPresets(self),
 		...triviaPresets(),
 		...variableSetPresets(self),
+		...creditSuitePresets(),
 	})
 }

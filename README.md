@@ -37,7 +37,11 @@ Trivia's saved Reveal Delay waits after the countdown reaches zero; voting close
 
 **OBS health:** connection, connecting, connection status, Scene Sync enablement, current program scene, active motion engine and last error variables, plus connection/Scene Sync feedbacks and status presets. These use the existing `/api/status` snapshot, not extra OBS polling. OBS audio works for speaker badges without enabling Scene Sync; high-frequency audio meters are not exposed as Companion variables.
 
-**OBS Border and Pattern Studios:** activate a default profile or assign one to an OBS source and optional scene; Border also supports standby on, off, or toggle. Source assignments support None (Border) or Auto (Pattern), and scene overrides support Inherit. Profile lists refresh on discovery and live updates. Active default profile ID/name variables and matching feedbacks are available for both studios.
+**OBS Border, Pattern, and Layout Studios:** activate a default border or pattern profile, assign one to an OBS source and optional scene, toggle Border standby, or smoothly apply a saved **OBS Layout Studio** scene layout preset (`obs_layout_apply`). Profile and layout lists refresh on discovery and live WebSocket updates.
+
+**Credit Suite:** live playback transport (`play`, `pause`, `toggle`, `restart`, `stop`), active project switching, section marker or timestamp jumping, and playback speed control (`0.25x`–`4x`), backed by real-time `credit-suite-update` / `credit-suite-transport` WebSocket sync, `credit_suite_*` variables, `credit_suite_playing` / `credit_suite_active_project` feedbacks, and ready-to-use **Credit Suite** presets.
+
+**Operator Mode & Multiplayer Bingo (LAN):** switch active Operator Mode preset boards live (`operator_profile_select` with `operator_profile*` variables and feedback), and lock/hide, focus player cards, or reset/shuffle Multiplayer Bingo boards (`multiplayer_bingo_*` actions, feedbacks, and variables using the sanitized overlay feed without exposing player LAN tokens).
 
 **Session subscribers:** `chat_subscribers` includes new and returning subscribers recorded by updated StreamPulse from native Twitch EventSub or SocialStream Ninja. No shared chat message is required for native notifications; nearby duplicate notifications share one count. The variable name is unchanged.
 

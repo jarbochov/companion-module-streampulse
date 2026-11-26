@@ -48,6 +48,10 @@ function jobsFor(api, groups, wanted = []) {
 	add('discovery', async () => ({ communityInsights: await api.communityInsightsStatus().catch(() => null) }))
 	add('discovery', async () => ({ obsBorders: await api.request('/api/obs-borders') }))
 	add('discovery', async () => ({ obsPatterns: await api.request('/api/obs-patterns') }))
+	add('discovery', async () => ({ obsLayout: await api.request('/api/obs-layout') }))
+	add('discovery', async () => ({ creditSuite: await api.request('/api/credit-suite') }))
+	add('discovery', async () => ({ operator: await api.request('/api/operator') }))
+	add('discovery', async () => ({ multiplayerBingo: await api.request('/api/multiplayer-bingo/overlay') }))
 	add('discovery', async () => ({ matchupPresets: (await api.matchupPresets()).presets || [] }))
 	add('discovery', async () => ({ pollPresets: (await api.pollPresets()).presets || [] }))
 	add('discovery', async () => ({ tournamentPresets: (await api.tournamentPresets(false)).presets || [] }))
@@ -149,6 +153,10 @@ function choiceSignature(state) {
 		...['obsBorders', 'obsPatterns'].map((key) =>
 			(state[key]?.profiles || []).map((profile) => [profile.id, profile.name]),
 		),
+		(state.obsLayout?.layouts || []).map((layout) => [layout.id, layout.name, layout.sceneName]),
+		(state.creditSuite?.projects || []).map((project) => [project.id, project.name]),
+		(state.operator?.profiles || []).map((profile) => [profile.id, profile.name]),
+		(state.multiplayerBingo?.session?.cards || []).map((card) => [card.id, card.playerName]),
 		(state.tournament?.matches || []).map((m) => [
 			m.id,
 			typeof m.entrant1 === 'object' ? m.entrant1?.name : m.entrant1,

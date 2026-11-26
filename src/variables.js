@@ -55,6 +55,23 @@ const STATIC_VARS = {
 	obs_border_profile: 'OBS Border: active default profile name',
 	obs_pattern_profile_id: 'OBS Pattern: active default profile ID',
 	obs_pattern_profile: 'OBS Pattern: active default profile name',
+	obs_layout_count: 'OBS Layout Studio: saved scene layouts',
+	credit_suite_playing: 'Credit Suite: actively playing (yes / no)',
+	credit_suite_state: 'Credit Suite: playback state (playing / paused / ended / disabled)',
+	credit_suite_project_id: 'Credit Suite: active project ID',
+	credit_suite_project: 'Credit Suite: active project name',
+	credit_suite_time: 'Credit Suite: current time (M:SS)',
+	credit_suite_duration: 'Credit Suite: total duration (M:SS)',
+	credit_suite_remaining: 'Credit Suite: time remaining (M:SS)',
+	credit_suite_progress: 'Credit Suite: playback progress (percent)',
+	credit_suite_speed: 'Credit Suite: playback speed multiplier',
+	operator_profile_id: 'Operator Mode: active preset board ID',
+	operator_profile: 'Operator Mode: active preset board name',
+	multiplayer_bingo_players: 'Multiplayer Bingo: active player cards',
+	multiplayer_bingo_locked: 'Multiplayer Bingo: stamping locked (yes / no)',
+	multiplayer_bingo_hidden: 'Multiplayer Bingo: overlay hidden (yes / no)',
+	multiplayer_bingo_focused: 'Multiplayer Bingo: focused player name',
+	multiplayer_bingo_winners: 'Multiplayer Bingo: winner count',
 	music_overlay: 'Music overlay (visible / hidden)',
 	viewers_average: 'Average viewers this session',
 	stream_uptime: 'Time since the stream went live (H:MM:SS)',
@@ -603,6 +620,53 @@ function updateVariables(self) {
 	values.trivia_correct_answer = correctChoice?.text || ''
 	values.trivia_correct_letter =
 		correctChoice?.letter || (correctIndex != null ? String.fromCharCode(65 + correctIndex) : '')
+
+	const cs = self.state.creditSuite
+	const csEnabled = cs && cs.enabled !== false
+	const csProjects = Array.isArray(cs?.projects) ? cs.projects : []
+	const csActiveId = csEnabled ? cs.activeProjectId || '' : ''
+	const csActive = csProjects.find((p) => p.id === csActiveId) || null
+	const csTransport = csEnabled ? cs.transport || {} : {}
+	const csPlaying = Boolean(csEnabled && csTransport.playing)
+	const csTime = Number(csTransport.timeSec) || 0
+	const csDur = Number(csTransport.durationSec) || 0
+	const csRem = Number.isFinite(Number(csTransport.remainingSec))
+		? Math.max(0, Number(csTransport.remainingSec))
+		: Math.max(0, csDur - csTime)
+	const csPct = Number.isFinite(Number(csTransport.progressPct))
+		? Number(csTransport.progressPct)
+		: csDur > 0
+			? Math.min(100, Math.round((csTime / csDur) * 100))
+			: 0
+	const csSpeed = Number(csTransport.speedRate) || 1
+	values.obs_layout_count = String((self.state.obsLayout?.layouts || []).length)
+	values.credit_suite_playing = yn(csPlaying)
+	values.credit_suite_state = !csEnabled
+		? 'disabled'
+		: csTransport.state || (csPlaying ? 'playing' : csDur > 0 && csTime >= csDur - 0.01 ? 'ended' : 'paused')
+	values.credit_suite_project_id = csActiveId
+	values.credit_suite_project = csActive?.name || csTransport.projectName || ''
+	values.credit_suite_time = csEnabled ? mss(csTime) : ''
+	values.credit_suite_duration = csEnabled && csDur > 0 ? mss(csDur) : ''
+	values.credit_suite_remaining = csEnabled && csDur > 0 ? mss(csRem) : ''
+	values.credit_suite_progress = csEnabled ? `${csPct}%` : ''
+	values.credit_suite_speed = csEnabled ? `${Number(csSpeed.toFixed(2))}x` : ''
+
+	const op = self.state.operator
+	const opActive = (op?.profiles || []).find((p) => p.id === op?.activeProfileId) || null
+	values.operator_profile_id = op?.activeProfileId || ''
+	values.operator_profile = opActive?.name || ''
+
+	const mb = self.state.multiplayerBingo?.session
+	const mbCards = Array.isArray(mb?.cards) ? mb.cards : []
+	const mbFocused = mb?.focusedCardId ? mbCards.find((c) => c.id === mb.focusedCardId) : null
+	values.multiplayer_bingo_players = String(mbCards.length)
+	values.multiplayer_bingo_locked = yn(Boolean(mb?.locked))
+	values.multiplayer_bingo_hidden = yn(Boolean(mb?.hidden))
+	values.multiplayer_bingo_focused = mbFocused?.playerName || ''
+	values.multiplayer_bingo_winners = String(
+		mbCards.filter((c) => Boolean(c.hasBingo || (c.bingos && c.bingos.length))).length,
+	)
 
 	for (const set of self.state.variableSets || []) {
 		const prefix = setPrefix(set.id)
