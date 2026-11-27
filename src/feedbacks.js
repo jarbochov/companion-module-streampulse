@@ -798,5 +798,38 @@ module.exports = async function (self) {
 			options: [],
 			callback: () => self.state.online !== false && Boolean(self.state.multiplayerBingo?.session?.hidden),
 		},
+		mp_bingo_four_corners: {
+			name: 'Multiplayer Bingo: Four Corners win mode enabled',
+			type: 'boolean',
+			description: 'True when Four Corners win mode is active on the Multiplayer Bingo board',
+			defaultStyle: { bgcolor: BLUE, color: WHITE },
+			options: [],
+			callback: () => self.state.online !== false && Boolean(self.state.multiplayerBingo?.session?.fourCorners),
+		},
+		mp_bingo_confirm_calls: {
+			name: 'Multiplayer Bingo: Host Confirm calls mode enabled',
+			type: 'boolean',
+			description: 'True when player cell calls require host confirmation before stamping',
+			defaultStyle: { bgcolor: BLUE, color: WHITE },
+			options: [],
+			callback: () => self.state.online !== false && Boolean(self.state.multiplayerBingo?.session?.confirmCalls),
+		},
+		mp_bingo_pending_calls: {
+			name: 'Multiplayer Bingo: pending player calls waiting',
+			type: 'boolean',
+			description: 'True when one or more player calls are awaiting host confirmation',
+			defaultStyle: { bgcolor: AMBER, color: WHITE },
+			options: [],
+			callback: () => {
+				if (self.state.online === false) return false
+				const mb = self.state.multiplayerBingo?.session
+				const count = Array.isArray(mb?.pendingCalls)
+					? mb.pendingCalls.length
+					: mb?.pendingCalls && typeof mb.pendingCalls === 'object'
+						? Object.keys(mb.pendingCalls).length
+						: Number(mb?.pendingCount) || 0
+				return count > 0
+			},
+		},
 	})
 }

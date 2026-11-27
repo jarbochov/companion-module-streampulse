@@ -16,6 +16,7 @@ const obsStudioActions = require('./actions/obs-studios')
 const creditSuiteActions = require('./actions/credit-suite')
 const operatorActions = require('./actions/operator')
 const multiplayerBingoActions = require('./actions/multiplayer-bingo')
+const displayActions = require('./actions/displays')
 
 module.exports = function (self) {
 	const run = (fn) => async () => {
@@ -46,5 +47,6 @@ module.exports = function (self) {
 		...creditSuiteActions(self, run),
 		...operatorActions(self, run),
 		...multiplayerBingoActions(self, run),
+		...displayActions(self, run),
 	})
 }

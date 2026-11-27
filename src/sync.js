@@ -52,6 +52,11 @@ function jobsFor(api, groups, wanted = []) {
 	add('discovery', async () => ({ creditSuite: await api.request('/api/credit-suite') }))
 	add('discovery', async () => ({ operator: await api.request('/api/operator') }))
 	add('discovery', async () => ({ multiplayerBingo: await api.request('/api/multiplayer-bingo/overlay') }))
+	add('discovery', async () => {
+		const data = await api.request('/api/variable-displays')
+		const list = Array.isArray(data?.displays) ? data.displays : []
+		return { bingoDisplays: list.filter((d) => d && (d.kind === 'bingo' || d.type === 'bingo')) }
+	})
 	add('discovery', async () => ({ matchupPresets: (await api.matchupPresets()).presets || [] }))
 	add('discovery', async () => ({ pollPresets: (await api.pollPresets()).presets || [] }))
 	add('discovery', async () => ({ tournamentPresets: (await api.tournamentPresets(false)).presets || [] }))
@@ -156,7 +161,15 @@ function choiceSignature(state) {
 		(state.obsLayout?.layouts || []).map((layout) => [layout.id, layout.name, layout.sceneName]),
 		(state.creditSuite?.projects || []).map((project) => [project.id, project.name]),
 		(state.operator?.profiles || []).map((profile) => [profile.id, profile.name]),
-		(state.multiplayerBingo?.session?.cards || []).map((card) => [card.id, card.playerName]),
+		(state.operator?.runbooks || []).map((rb) => [
+			rb.id,
+			rb.name,
+			(rb.items || []).map((item) => [item.id, item.text, item.done]),
+		]),
+		(state.multiplayerBingo?.session?.cards || []).map((card) => [card.id, card.name || card.playerName]),
+		(state.multiplayerBingo?.packs || []).map((pack) => [pack.id, pack.name]),
+		(state.multiplayerBingo?.activePack?.prompts || []).map((p) => (typeof p === 'string' ? p : p?.text || '')),
+		(state.bingoDisplays || []).map((d) => [d.id, d.name]),
 		(state.tournament?.matches || []).map((m) => [
 			m.id,
 			typeof m.entrant1 === 'object' ? m.entrant1?.name : m.entrant1,

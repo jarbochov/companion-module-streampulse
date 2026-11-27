@@ -14,6 +14,8 @@ const tierListPresets = require('./presets/tier-list')
 const triviaPresets = require('./presets/trivia')
 const variableSetPresets = require('./presets/variable-sets')
 const creditSuitePresets = require('./presets/credit-suite')
+const operatorPresets = require('./presets/operator')
+const multiplayerBingoPresets = require('./presets/multiplayer-bingo')
 const { speakerPresets } = require('./speakers')
 
 module.exports = function (self) {
@@ -35,5 +37,7 @@ module.exports = function (self) {
 		...triviaPresets(),
 		...variableSetPresets(self),
 		...creditSuitePresets(),
+		...operatorPresets(self),
+		...multiplayerBingoPresets(),
 	})
 }

@@ -120,6 +120,61 @@ module.exports = function (self, run) {
 					})
 				})(),
 		},
+		obs_layout_aspect: {
+			name: 'OBS Studio: Morph or cycle source aspect ratio',
+			description:
+				'Smoothly morph an OBS source to a target aspect ratio or cycle through ratios via OBS Layout & Aspect Studio.',
+			options: [
+				{
+					id: 'sourceName',
+					type: 'textinput',
+					label: 'OBS source name',
+					default: '',
+					useVariables: true,
+				},
+				{
+					id: 'ratio',
+					type: 'dropdown',
+					label: 'Aspect ratio',
+					choices: [
+						{ id: 'cycle', label: 'Cycle Next Ratio' },
+						{ id: 'native', label: 'Native (Original)' },
+						{ id: '16:9', label: '16:9 (Widescreen)' },
+						{ id: '4:3', label: '4:3 (Classic)' },
+						{ id: '1:1', label: '1:1 (Square)' },
+						{ id: '4:5', label: '4:5 (Portrait)' },
+						{ id: '9:16', label: '9:16 (Vertical)' },
+						{ id: '21:9', label: '21:9 (Ultrawide)' },
+					],
+					default: 'cycle',
+				},
+				{
+					id: 'durationMs',
+					type: 'number',
+					label: 'Transition duration (ms)',
+					default: 450,
+					min: 0,
+					max: 10000,
+				},
+			],
+			callback: async ({ options }) =>
+				run(async () => {
+					const sourceName = (await self.parseVariablesInString(String(options.sourceName || ''))).trim()
+					if (!sourceName) throw new Error('OBS source name is required')
+					const ratio = String(options.ratio || 'cycle')
+					const body = {
+						sourceName,
+						...(ratio === 'cycle' ? { action: 'cycle' } : { action: 'set', ratio }),
+					}
+					if (Number.isFinite(Number(options.durationMs))) {
+						body.durationMs = Math.max(0, Number(options.durationMs))
+					}
+					return self.api.request('/api/obs-layout/aspect', {
+						method: 'POST',
+						body,
+					})
+				})(),
+		},
 	}
 }
 

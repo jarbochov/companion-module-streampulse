@@ -41,6 +41,7 @@ function initialState() {
 		creditSuite: null,
 		operator: null,
 		multiplayerBingo: null,
+		bingoDisplays: [],
 	}
 }
 
@@ -222,8 +223,28 @@ class ModuleInstance extends InstanceBase {
 					transport: data,
 				},
 			})
-		} else if (msg.type === 'operator-update' && Array.isArray(data.profiles)) {
-			this.applyPatch({ operator: data })
+		} else if (msg.type === 'operator-update' && (Array.isArray(data.profiles) || Array.isArray(data.runbooks))) {
+			const prev = this.state.operator || {}
+			this.applyPatch({
+				operator: {
+					...prev,
+					...data,
+					...(Array.isArray(data.profiles) ? { profiles: data.profiles } : {}),
+					...(Array.isArray(data.runbooks) ? { runbooks: data.runbooks } : {}),
+				},
+			})
+		} else if (msg.type === 'operator-runbooks-update' && Array.isArray(data.runbooks)) {
+			const prev = this.state.operator || {}
+			this.applyPatch({
+				operator: {
+					...prev,
+					runbooks: data.runbooks,
+				},
+			})
+		} else if (msg.type === 'variable-displays-update' && Array.isArray(data.displays)) {
+			this.applyPatch({
+				bingoDisplays: data.displays.filter((d) => d && (d.kind === 'bingo' || d.type === 'bingo')),
+			})
 		} else if (msg.type === 'multiplayer-bingo-update' && data.session) {
 			this.applyPatch({ multiplayerBingo: data })
 		} else if (['alert', 'alert-skip', 'alert-clear'].includes(msg.type)) {

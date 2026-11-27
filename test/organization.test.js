@@ -51,6 +51,9 @@ const actionIds = [
 	'variable_counter',
 	'variable_set',
 	'variable_roll',
+	'variable_toggle',
+	'variable_select_step',
+	'variable_tags_clear',
 	'timer_control',
 	'goal_action',
 	'mark_clip',
@@ -203,11 +206,11 @@ function digest(value) {
 	return createHash('sha256').update(serialized).digest('hex')
 }
 
-// Updated for Number options and API-name labels; action IDs and preset definitions remain stable.
+// Updated for toggle/select/tags variable actions; legacy action IDs and preset definitions remain stable.
 const baseline = {
-	empty: '38c7405ec133f272637b6a5a5db102d273575816d540efbcca64446a689ed254',
-	populated: 'abb98900258ff50c55266c8566c6c389ea5569829588a4e01bdbeb74dccf26e5',
-	fallback: 'a3df18e9d795b0b23771f6f54473b2b1e31be3435e9a68d9f26c562a216606f1',
+	empty: '26b6bd79727dd9c0f280f77ecb28be0c9f7c7149060995c6c99898c01ba84828',
+	populated: '7e2b308e367e124893e6ac00abf0d8a085487d8e2ea9b779f5a17680ea45e93c',
+	fallback: '94275fc3574be83eee65926f2aa70a436ab435890496065f3fada232846e50b5',
 	presets: '14cbfff1aad235483a27e8f936c9160515ef302ca5e28b58e110c2e41e527780',
 }
 

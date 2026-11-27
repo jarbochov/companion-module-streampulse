@@ -67,11 +67,15 @@ const STATIC_VARS = {
 	credit_suite_speed: 'Credit Suite: playback speed multiplier',
 	operator_profile_id: 'Operator Mode: active preset board ID',
 	operator_profile: 'Operator Mode: active preset board name',
+	operator_runbooks_count: 'Operator Mode: saved runbooks count',
 	multiplayer_bingo_players: 'Multiplayer Bingo: active player cards',
 	multiplayer_bingo_locked: 'Multiplayer Bingo: stamping locked (yes / no)',
 	multiplayer_bingo_hidden: 'Multiplayer Bingo: overlay hidden (yes / no)',
 	multiplayer_bingo_focused: 'Multiplayer Bingo: focused player name',
 	multiplayer_bingo_winners: 'Multiplayer Bingo: winner count',
+	mp_bingo_four_corners: 'Multiplayer Bingo: Four Corners win mode (yes / no)',
+	mp_bingo_confirm_calls: 'Multiplayer Bingo: Host Confirm player calls mode (yes / no)',
+	mp_bingo_pending_count: 'Multiplayer Bingo: pending player calls awaiting confirmation',
 	music_overlay: 'Music overlay (visible / hidden)',
 	viewers_average: 'Average viewers this session',
 	stream_uptime: 'Time since the stream went live (H:MM:SS)',
@@ -656,17 +660,26 @@ function updateVariables(self) {
 	const opActive = (op?.profiles || []).find((p) => p.id === op?.activeProfileId) || null
 	values.operator_profile_id = op?.activeProfileId || ''
 	values.operator_profile = opActive?.name || ''
+	values.operator_runbooks_count = String((op?.runbooks || []).length)
 
 	const mb = self.state.multiplayerBingo?.session
 	const mbCards = Array.isArray(mb?.cards) ? mb.cards : []
 	const mbFocused = mb?.focusedCardId ? mbCards.find((c) => c.id === mb.focusedCardId) : null
+	const mbPendingCount = Array.isArray(mb?.pendingCalls)
+		? mb.pendingCalls.length
+		: mb?.pendingCalls && typeof mb.pendingCalls === 'object'
+			? Object.keys(mb.pendingCalls).length
+			: Number(mb?.pendingCount) || 0
 	values.multiplayer_bingo_players = String(mbCards.length)
 	values.multiplayer_bingo_locked = yn(Boolean(mb?.locked))
 	values.multiplayer_bingo_hidden = yn(Boolean(mb?.hidden))
-	values.multiplayer_bingo_focused = mbFocused?.playerName || ''
+	values.multiplayer_bingo_focused = mbFocused?.playerName || mbFocused?.name || ''
 	values.multiplayer_bingo_winners = String(
 		mbCards.filter((c) => Boolean(c.hasBingo || (c.bingos && c.bingos.length))).length,
 	)
+	values.mp_bingo_four_corners = yn(Boolean(mb?.fourCorners))
+	values.mp_bingo_confirm_calls = yn(Boolean(mb?.confirmCalls))
+	values.mp_bingo_pending_count = String(mbPendingCount)
 
 	for (const set of self.state.variableSets || []) {
 		const prefix = setPrefix(set.id)

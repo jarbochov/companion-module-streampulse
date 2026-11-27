@@ -15,3 +15,39 @@ test('Number actions preserve explicit amounts and optionally use the saved step
 		['score', 'reset', {}],
 	])
 })
+
+test('Standalone toggle, select and tags variable actions hit toggle, next, prev and clear endpoints', async () => {
+	const calls = []
+	const errors = []
+	const self = {
+		api: { variable: async (...args) => calls.push(args) },
+		parseVariablesInString: async (v) => v,
+		log: (level, msg) => errors.push([level, msg]),
+	}
+	const run = (fn) => async () => {
+		try {
+			await fn()
+		} catch (err) {
+			self.log('error', err.message)
+		}
+	}
+	const defs = actions(self, run)
+
+	await defs.variable_toggle.callback({ options: { name: 'mic_live', tag: '' } })
+	await defs.variable_toggle.callback({ options: { name: 'badges', tag: 'vip' } })
+	await defs.variable_select_step.callback({ options: { name: 'camera_mode', direction: 'next' } })
+	await defs.variable_select_step.callback({ options: { name: 'camera_mode', direction: 'prev' } })
+	await defs.variable_tags_clear.callback({ options: { name: 'badges' } })
+
+	assert.deepEqual(calls, [
+		['mic_live', 'toggle', {}],
+		['badges', 'toggle', { value: 'vip' }],
+		['camera_mode', 'next', {}],
+		['camera_mode', 'prev', {}],
+		['badges', 'clear', {}],
+	])
+
+	await defs.variable_toggle.callback({ options: { name: '   ', tag: '' } })
+	assert.equal(errors.length, 1)
+	assert.equal(errors[0][0], 'error')
+})

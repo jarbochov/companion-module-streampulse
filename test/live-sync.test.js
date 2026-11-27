@@ -458,3 +458,88 @@ test('tracker choices refresh when fields or catalog entries change', async () =
 	})
 	assert.equal(instance.actions.variable_set_entry_step.options[0].choices[0].label, 'Players / Points')
 })
+
+test('Operator runbooks, variable-displays bingo discovery, and multiplayer bingo WS events update live state', async () => {
+	const { instance, responses } = harness({ definitions: true })
+	responses.request = (url) => {
+		if (url === '/api/operator') {
+			return {
+				activeProfileId: 'default',
+				profiles: [{ id: 'default', name: 'Main Show' }],
+				runbooks: [{ id: 'pre-show', name: 'Pre-Show', items: [{ id: 'cue-1', text: 'Mic check', done: false }] }],
+			}
+		}
+		if (url === '/api/variable-displays') {
+			return {
+				displays: [
+					{ id: 'inv-1', name: 'Inventory', kind: 'inventory' },
+					{ id: 'bingo-1', name: 'Stream Bingo', kind: 'bingo' },
+				],
+			}
+		}
+		if (url === '/api/multiplayer-bingo/overlay') {
+			return {
+				activePackId: 'pack-a',
+				activePack: { id: 'pack-a', name: 'Pack A', prompts: ['First prompt'] },
+				packs: [{ id: 'pack-a', name: 'Pack A' }],
+				session: { locked: false, hidden: false, fourCorners: false, confirmCalls: true, pendingCalls: [], cards: [] },
+			}
+		}
+		return null
+	}
+	await instance.poll()
+
+	assert.equal(instance.values.operator_runbooks_count, '1')
+	assert.equal(instance.actions.operator_runbook_toggle.options[0].choices[0].id, 'pre-show')
+	assert.equal(instance.state.bingoDisplays.length, 1)
+	assert.equal(instance.state.bingoDisplays[0].id, 'bingo-1')
+	assert.equal(instance.actions.display_bingo_control.options[0].choices[0].id, 'bingo-1')
+	assert.equal(instance.values.mp_bingo_confirm_calls, 'yes')
+	assert.equal(instance.values.mp_bingo_pending_count, '0')
+
+	// WebSocket updates for runbooks, displays, and multiplayer bingo
+	instance.handleWebSocketMessage({
+		type: 'operator-runbooks-update',
+		data: {
+			runbooks: [
+				{ id: 'pre-show', name: 'Pre-Show', items: [] },
+				{ id: 'post-show', name: 'Post-Show', items: [] },
+			],
+		},
+	})
+	assert.equal(instance.values.operator_runbooks_count, '2')
+	assert.equal(instance.actions.operator_runbook_toggle.options[0].choices.length, 2)
+
+	instance.handleWebSocketMessage({
+		type: 'variable-displays-update',
+		data: {
+			displays: [
+				{ id: 'table-1', name: 'Schedule', kind: 'table' },
+				{ id: 'bingo-1', name: 'Stream Bingo', kind: 'bingo' },
+				{ id: 'bingo-2', name: 'Boss Bingo', kind: 'bingo' },
+			],
+		},
+	})
+	assert.equal(instance.state.bingoDisplays.length, 2)
+	assert.equal(instance.actions.display_bingo_control.options[0].choices[1].id, 'bingo-2')
+
+	instance.handleWebSocketMessage({
+		type: 'multiplayer-bingo-update',
+		data: {
+			activePackId: 'pack-a',
+			activePack: { id: 'pack-a', name: 'Pack A', prompts: ['First prompt', 'Second prompt'] },
+			packs: [{ id: 'pack-a', name: 'Pack A' }],
+			session: {
+				locked: false,
+				hidden: false,
+				fourCorners: true,
+				confirmCalls: true,
+				pendingCalls: [{ prompt: 1 }],
+				cards: [],
+			},
+		},
+	})
+	assert.equal(instance.values.mp_bingo_four_corners, 'yes')
+	assert.equal(instance.values.mp_bingo_pending_count, '1')
+	assert.equal(instance.feedbacks.mp_bingo_pending_calls.callback(), true)
+})

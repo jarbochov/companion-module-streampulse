@@ -53,18 +53,42 @@ function createMock() {
 					{ id: 'op-live', name: 'Live Show' },
 					{ id: 'op-intermission', name: 'Intermission' },
 				],
+				runbooks: [
+					{
+						id: 'pre-show',
+						name: 'Pre-Show Checklist',
+						items: [
+							{ id: 'cue-1', kind: 'task', text: 'Check mic levels', done: false },
+							{ id: 'cue-2', kind: 'task', text: 'Start recording', done: true },
+						],
+					},
+				],
 			},
 			multiplayerBingo: {
+				activePackId: 'default-race',
+				activePack: {
+					id: 'default-race',
+					name: 'Default Race',
+					prompts: ['Boss defeated', 'Found secret room', 'No-hit stage'],
+				},
+				packs: [
+					{ id: 'default-race', name: 'Default Race' },
+					{ id: 'speedrun-pack', name: 'Speedrun Pack' },
+				],
 				session: {
 					locked: false,
 					hidden: false,
+					fourCorners: true,
+					confirmCalls: true,
+					pendingCalls: [{ prompt: 1, cardId: 'card-1' }],
 					focusedCardId: 'card-1',
 					cards: [
 						{ id: 'card-1', playerName: 'Alex', hasBingo: true },
-						{ id: 'card-2', playerName: 'Sam', hasBingo: false },
+						{ id: 'card-2', name: 'Sam', hasBingo: false },
 					],
 				},
 			},
+			bingoDisplays: [{ id: 'disp-bingo-1', name: 'Main Bingo Card', kind: 'bingo' }],
 		},
 		api: {
 			request: async (path, opts) => {
@@ -189,4 +213,157 @@ test('OBS Layout, Operator Mode and Multiplayer Bingo: actions, feedbacks and va
 			['/api/multiplayer-bingo/shuffle', undefined],
 		],
 	)
+})
+
+test('Operator Runbooks, Multiplayer Bingo full parity, OBS Aspect, and Display Library Bingo work cleanly', async () => {
+	const { self, requests } = createMock()
+	defineActions(self)
+	defineFeedbacks(self)
+	definePresets(self)
+	defineVariables(self)
+	updateVariables(self)
+
+	// New variables
+	assert.equal(self.variableValues.operator_runbooks_count, '1')
+	assert.equal(self.variableValues.mp_bingo_four_corners, 'yes')
+	assert.equal(self.variableValues.mp_bingo_confirm_calls, 'yes')
+	assert.equal(self.variableValues.mp_bingo_pending_count, '1')
+
+	// New feedbacks
+	assert.equal(self.feedbacks.mp_bingo_four_corners.callback(), true)
+	assert.equal(self.feedbacks.mp_bingo_confirm_calls.callback(), true)
+	assert.equal(self.feedbacks.mp_bingo_pending_calls.callback(), true)
+
+	// Object-map pendingCalls also supported
+	self.state.multiplayerBingo.session.pendingCalls = { 0: { cardId: 'card-1' }, 2: { cardId: 'card-2' } }
+	updateVariables(self)
+	assert.equal(self.variableValues.mp_bingo_pending_count, '2')
+	assert.equal(self.feedbacks.mp_bingo_pending_calls.callback(), true)
+
+	// Empty pendingCalls clears feedback
+	self.state.multiplayerBingo.session.pendingCalls = []
+	updateVariables(self)
+	assert.equal(self.variableValues.mp_bingo_pending_count, '0')
+	assert.equal(self.feedbacks.mp_bingo_pending_calls.callback(), false)
+
+	// Operator runbook actions
+	await self.actions.operator_runbook_toggle.callback({
+		options: { runbook: 'pre-show', customRunbook: '', targetType: 'index', index: 2, itemId: '', done: 'true' },
+	})
+	await self.actions.operator_runbook_toggle.callback({
+		options: {
+			runbook: 'pre-show',
+			customRunbook: '',
+			targetType: 'itemId',
+			index: 1,
+			itemId: 'cue-1',
+			done: 'toggle',
+		},
+	})
+	await self.actions.operator_runbook_reset.callback({
+		options: { runbook: 'pre-show', customRunbook: '', confirm: false },
+	})
+	await self.actions.operator_runbook_reset.callback({
+		options: { runbook: 'pre-show', customRunbook: '', confirm: true },
+	})
+
+	// Multiplayer Bingo new actions
+	await self.actions.multiplayer_bingo_flags.callback({ options: { field: 'fourCorners', mode: 'toggle' } })
+	await self.actions.multiplayer_bingo_flags.callback({ options: { field: 'confirmCalls', mode: 'false' } })
+	await self.actions.multiplayer_bingo_call.callback({ options: { prompt: '1', customPrompt: '', mode: 'true' } })
+	await self.actions.multiplayer_bingo_call.callback({ options: { prompt: '0', customPrompt: '2', mode: 'toggle' } })
+	await self.actions.multiplayer_bingo_pack_select.callback({ options: { pack: 'speedrun-pack', confirm: false } })
+	await self.actions.multiplayer_bingo_pack_select.callback({ options: { pack: 'speedrun-pack', confirm: true } })
+	await self.actions.multiplayer_bingo_pending.callback({ options: { action: 'confirm', scope: 'all' } })
+	await self.actions.multiplayer_bingo_pending.callback({
+		options: { action: 'dismiss', scope: 'prompt', prompt: '1', customPrompt: '' },
+	})
+
+	// OBS Layout Aspect Ratio action
+	await self.actions.obs_layout_aspect.callback({
+		options: { sourceName: 'Facecam', ratio: 'cycle', durationMs: 450 },
+	})
+	await self.actions.obs_layout_aspect.callback({
+		options: { sourceName: 'Facecam', ratio: '9:16', durationMs: 600 },
+	})
+
+	// Display Library Bingo action
+	await self.actions.display_bingo_control.callback({
+		options: { display: 'disp-bingo-1', customDisplay: '', action: 'toggle', cell: 4, stamped: 'true', confirm: false },
+	})
+	await self.actions.display_bingo_control.callback({
+		options: {
+			display: 'disp-bingo-1',
+			customDisplay: '',
+			action: 'toggle',
+			cell: 4,
+			stamped: 'toggle',
+			confirm: false,
+		},
+	})
+	await self.actions.display_bingo_control.callback({
+		options: {
+			display: 'disp-bingo-1',
+			customDisplay: '',
+			action: 'shuffle',
+			cell: 0,
+			stamped: 'toggle',
+			confirm: false,
+		},
+	})
+	await self.actions.display_bingo_control.callback({
+		options: {
+			display: 'disp-bingo-1',
+			customDisplay: '',
+			action: 'shuffle',
+			cell: 0,
+			stamped: 'toggle',
+			confirm: true,
+		},
+	})
+	await self.actions.display_bingo_control.callback({
+		options: { display: '', customDisplay: 'custom-bingo', action: 'reset', cell: 0, stamped: 'toggle', confirm: true },
+	})
+
+	assert.deepEqual(
+		requests.map((r) => [r.path, r.opts.body]),
+		[
+			['/api/operator/runbooks/pre-show/toggle', { index: 1, done: true }],
+			['/api/operator/runbooks/pre-show/toggle', { itemId: 'cue-1' }],
+			['/api/operator/runbooks/pre-show/reset', undefined],
+			['/api/multiplayer-bingo/flags', { fourCorners: false }],
+			['/api/multiplayer-bingo/flags', { confirmCalls: false }],
+			['/api/multiplayer-bingo/call', { prompt: 1, called: true }],
+			['/api/multiplayer-bingo/call', { prompt: 2 }],
+			['/api/multiplayer-bingo/packs/select', { id: 'speedrun-pack' }],
+			['/api/multiplayer-bingo/confirm', { all: true }],
+			['/api/multiplayer-bingo/dismiss', { prompt: 1 }],
+			['/api/obs-layout/aspect', { sourceName: 'Facecam', action: 'cycle', durationMs: 450 }],
+			['/api/obs-layout/aspect', { sourceName: 'Facecam', action: 'set', ratio: '9:16', durationMs: 600 }],
+			['/api/variable-displays/disp-bingo-1/bingo/toggle', { cell: 4, stamped: true }],
+			['/api/variable-displays/disp-bingo-1/bingo/toggle', { cell: 4 }],
+			['/api/variable-displays/disp-bingo-1/bingo/shuffle', undefined],
+			['/api/variable-displays/custom-bingo/bingo/reset', undefined],
+		],
+	)
+
+	// Presets present
+	assert.equal(self.presets.operator_runbook_toggle_cue1.category, 'Operator')
+	assert.equal(self.presets.operator_runbook_reset.category, 'Operator')
+	assert.equal(self.presets.mp_bingo_confirm_all_pending.category, 'Multiplayer Bingo')
+	assert.equal(self.presets.mp_bingo_four_corners_toggle.category, 'Multiplayer Bingo')
+
+	// choiceSignature tracks runbooks, bingo packs/prompts, and bingo displays
+	const sig1 = choiceSignature(self.state)
+	self.state.operator.runbooks.push({ id: 'post-show', name: 'Post-Show', items: [] })
+	const sig2 = choiceSignature(self.state)
+	assert.notEqual(sig2, sig1)
+
+	self.state.multiplayerBingo.packs.push({ id: 'new-pack', name: 'New Pack' })
+	const sig3 = choiceSignature(self.state)
+	assert.notEqual(sig3, sig2)
+
+	self.state.bingoDisplays.push({ id: 'disp-bingo-2', name: 'Side Bingo', kind: 'bingo' })
+	const sig4 = choiceSignature(self.state)
+	assert.notEqual(sig4, sig3)
 })

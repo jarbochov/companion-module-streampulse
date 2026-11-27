@@ -68,5 +68,61 @@ module.exports = function (self, run) {
 			options: [{ id: 'name', type: 'textinput', label: 'List API name (without group prefix)', default: '' }],
 			callback: async (e) => run(() => self.api.variableRoll(e.options.name))(),
 		},
+		variable_toggle: {
+			name: 'Variables: Toggle boolean or tag',
+			description: 'Toggle a boolean toggle variable (leave Tag blank) or toggle a specific tag on a tags variable.',
+			options: [
+				{ id: 'name', type: 'textinput', label: 'Variable API name (without group prefix)', default: '' },
+				{
+					id: 'tag',
+					type: 'textinput',
+					label: 'Tag value (blank = toggle boolean)',
+					default: '',
+					useVariables: true,
+				},
+			],
+			callback: async (e) =>
+				run(async () => {
+					const name = String(e.options.name || '').trim()
+					if (!name) throw new Error('Variable API name is required')
+					const tag = (await self.parseVariablesInString(String(e.options.tag || ''))).trim()
+					return self.api.variable(name, 'toggle', tag ? { value: tag } : {})
+				})(),
+		},
+		variable_select_step: {
+			name: 'Variables: Cycle select variable (next / prev)',
+			description: 'Advance a StreamPulse select variable to the next or previous configured option.',
+			options: [
+				{ id: 'name', type: 'textinput', label: 'Select API name (without group prefix)', default: '' },
+				{
+					id: 'direction',
+					type: 'dropdown',
+					label: 'Direction',
+					default: 'next',
+					choices: [
+						{ id: 'next', label: 'Next option' },
+						{ id: 'prev', label: 'Previous option' },
+					],
+				},
+			],
+			callback: async (e) =>
+				run(async () => {
+					const name = String(e.options.name || '').trim()
+					if (!name) throw new Error('Select variable API name is required')
+					const dir = e.options.direction === 'prev' ? 'prev' : 'next'
+					return self.api.variable(name, dir, {})
+				})(),
+		},
+		variable_tags_clear: {
+			name: 'Variables: Clear all tags',
+			description: 'Remove all active tags from a StreamPulse tags variable.',
+			options: [{ id: 'name', type: 'textinput', label: 'Tags API name (without group prefix)', default: '' }],
+			callback: async (e) =>
+				run(async () => {
+					const name = String(e.options.name || '').trim()
+					if (!name) throw new Error('Tags variable API name is required')
+					return self.api.variable(name, 'clear', {})
+				})(),
+		},
 	}
 }
