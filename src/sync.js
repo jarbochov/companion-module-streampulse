@@ -155,9 +155,16 @@ function choiceSignature(state) {
 		].map((key) => (state[key] || []).map((p) => [p.id, p.name || p.title])),
 		(state.tierList?.items || []).map((item) => [item.id, item.name, item.tierId]),
 		(state.trivia?.questions || []).map((q) => [q.id, q.question, q.done]),
-		...['obsBorders', 'obsPatterns'].map((key) =>
+		...['obsBorders', 'obsPatterns'].map((key) => [
 			(state[key]?.profiles || []).map((profile) => [profile.id, profile.name]),
-		),
+			state[key]?.knownSources || [],
+			state[key]?.knownScenes || [],
+			Object.entries(state[key]?.assignments || {}).map(([src, cfg]) => [
+				src,
+				cfg?.defaultProfileId || '',
+				Object.entries(cfg?.sceneOverrides || cfg?.byScene || {}),
+			]),
+		]),
 		(state.obsLayout?.layouts || []).map((layout) => [layout.id, layout.name, layout.sceneName]),
 		(state.creditSuite?.projects || []).map((project) => [project.id, project.name]),
 		(state.operator?.profiles || []).map((profile) => [profile.id, profile.name]),

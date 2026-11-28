@@ -5,6 +5,70 @@ function profileChoices(state) {
 		: [{ id: '', label: '(no profiles found)' }]
 }
 
+function sourceChoices(state, inactiveId = 'none') {
+	const assignments = state?.assignments || {}
+	const profileNames = new Map((state?.profiles || []).map((p) => [p.id, p.name || p.id]))
+	const sourceSet = new Set([
+		...Object.keys(assignments),
+		...(Array.isArray(state?.knownSources) ? state.knownSources : []),
+	])
+	for (const list of Object.values(state?.sceneSources || {})) {
+		if (Array.isArray(list)) list.forEach((src) => src && sourceSet.add(src))
+	}
+	const entries = [...sourceSet]
+		.map((name) => String(name || '').trim())
+		.filter(Boolean)
+		.map((name) => {
+			const cfg = assignments[name] || {}
+			const defId = cfg.defaultProfileId || ''
+			const hasDef = Boolean(defId && defId !== inactiveId && defId !== 'inherit')
+			const sceneOverrides = Object.entries(cfg.sceneOverrides || cfg.byScene || {}).filter(
+				([, pid]) => pid && pid !== inactiveId && pid !== 'inherit',
+			)
+			const active = hasDef || sceneOverrides.length > 0
+			const parts = []
+			if (hasDef) parts.push(profileNames.get(defId) || defId)
+			if (sceneOverrides.length === 1) {
+				const [scn, pid] = sceneOverrides[0]
+				parts.push(`${scn}: ${profileNames.get(pid) || pid}`)
+			} else if (sceneOverrides.length > 1) {
+				parts.push(`${sceneOverrides.length} scene overrides`)
+			}
+			const label = parts.length ? `${name} [${parts.join(' · ')}]` : name
+			return { id: name, label, active }
+		})
+	entries.sort((a, b) => Number(b.active) - Number(a.active) || a.id.localeCompare(b.id))
+	return entries.map(({ id, label }) => ({ id, label }))
+}
+
+function sceneChoices(state, inactiveId = 'none') {
+	const assignments = state?.assignments || {}
+	const sceneSet = new Set([
+		...(Array.isArray(state?.knownScenes) ? state.knownScenes : []),
+		...Object.keys(state?.sceneSources || {}),
+	])
+	const overrideCounts = new Map()
+	for (const cfg of Object.values(assignments)) {
+		for (const [scn, pid] of Object.entries(cfg?.sceneOverrides || cfg?.byScene || {})) {
+			if (!scn) continue
+			sceneSet.add(scn)
+			if (pid && pid !== inactiveId && pid !== 'inherit') {
+				overrideCounts.set(scn, (overrideCounts.get(scn) || 0) + 1)
+			}
+		}
+	}
+	const entries = [...sceneSet]
+		.map((name) => String(name || '').trim())
+		.filter(Boolean)
+		.map((name) => {
+			const count = overrideCounts.get(name) || 0
+			const label = count > 0 ? `${name} [${count} active]` : name
+			return { id: name, label, count }
+		})
+	entries.sort((a, b) => b.count - a.count || a.id.localeCompare(b.id))
+	return entries.map(({ id, label }) => ({ id, label }))
+}
+
 function layoutChoices(state) {
 	const layouts = state?.layouts || []
 	return layouts.length
@@ -15,12 +79,28 @@ function layoutChoices(state) {
 		: [{ id: '', label: '(no layouts found)' }]
 }
 
-function profileOptions(state, label, special) {
+function profileOptions(state, label, special, inactiveId = 'none') {
 	const choices = [...profileChoices(state), ...special]
 	return [
 		{ id: 'profile', type: 'dropdown', label, choices, default: choices[0].id },
-		{ id: 'target', type: 'textinput', label: 'OBS source (blank = active default)', default: '', useVariables: true },
-		{ id: 'scene', type: 'textinput', label: 'Scene override (optional)', default: '', useVariables: true },
+		{
+			id: 'targets',
+			type: 'multidropdown',
+			label: 'OBS sources (multi-select; blank = active default)',
+			choices: sourceChoices(state, inactiveId),
+			default: [],
+			minSelection: 0,
+		},
+		{
+			id: 'scenes',
+			type: 'multidropdown',
+			label: 'Scenes (optional multi-select; blank = source default)',
+			choices: sceneChoices(state, inactiveId),
+			default: [],
+			minSelection: 0,
+		},
+		{ id: 'target', type: 'textinput', label: 'Custom OBS source (optional, supports variables)', default: '', useVariables: true },
+		{ id: 'scene', type: 'textinput', label: 'Custom scene override (optional, supports variables)', default: '', useVariables: true },
 	]
 }
 
@@ -29,33 +109,65 @@ module.exports = function (self, run) {
 		(domain) =>
 		async ({ options }) =>
 			run(async () => {
-				const target = await self.parseVariablesInString(String(options.target || ''))
-				const scene = await self.parseVariablesInString(String(options.scene || ''))
-				if (!target.trim() && ['auto', 'none', 'inherit'].includes(options.profile))
+				const rawTarget = await self.parseVariablesInString(String(options.target || ''))
+				const rawScene = await self.parseVariablesInString(String(options.scene || ''))
+				const targets = [
+					...(Array.isArray(options.targets) ? options.targets : []),
+					...rawTarget.split(','),
+				]
+					.map((v) => String(v || '').trim())
+					.filter(Boolean)
+				const scenes = [
+					...(Array.isArray(options.scenes) ? options.scenes : []),
+					...rawScene.split(','),
+				]
+					.map((v) => String(v || '').trim())
+					.filter(Boolean)
+				const uniqueTargets = [...new Set(targets)]
+				const uniqueScenes = [...new Set(scenes)]
+				if (!uniqueTargets.length && ['auto', 'none', 'inherit'].includes(options.profile))
 					throw new Error('A source is required for Auto, None or Inherit')
-				if (options.profile === 'inherit' && !scene.trim()) throw new Error('A scene is required for Inherit')
+				if (options.profile === 'inherit' && !uniqueScenes.length) throw new Error('A scene is required for Inherit')
+				const body =
+					uniqueTargets.length > 1 || uniqueScenes.length > 1
+						? { profileId: options.profile, sourceNames: uniqueTargets, sceneNames: uniqueScenes }
+						: {
+								profileId: options.profile,
+								sourceName: uniqueTargets[0] || '',
+								sceneName: uniqueScenes[0] || '',
+							}
 				return self.api.request(`/api/obs-${domain}/activate`, {
 					method: 'POST',
-					body: { profileId: options.profile, sourceName: target.trim(), sceneName: scene.trim() },
+					body,
 				})
 			})()
 	return {
 		obs_border_activate: {
 			name: 'OBS Studio: Activate or assign border profile',
-			description: 'Set the active default, or assign a profile to an OBS source and optional scene.',
-			options: profileOptions(self.state.obsBorders, 'Border profile', [
-				{ id: 'none', label: 'None (source only)' },
-				{ id: 'inherit', label: 'Inherit (scene override only)' },
-			]),
+			description: 'Set the active default, or assign a profile to one or more OBS sources and optional scenes.',
+			options: profileOptions(
+				self.state.obsBorders,
+				'Border profile',
+				[
+					{ id: 'none', label: 'None (source only)' },
+					{ id: 'inherit', label: 'Inherit (scene override only)' },
+				],
+				'none',
+			),
 			callback: activate('borders'),
 		},
 		obs_pattern_activate: {
 			name: 'OBS Studio: Activate or assign pattern profile',
-			description: 'Set the active default, or assign a profile to an OBS source and optional scene.',
-			options: profileOptions(self.state.obsPatterns, 'Pattern profile', [
-				{ id: 'auto', label: 'Auto (source only)' },
-				{ id: 'inherit', label: 'Inherit (scene override only)' },
-			]),
+			description: 'Set the active default, or assign a profile to one or more OBS sources and optional scenes.',
+			options: profileOptions(
+				self.state.obsPatterns,
+				'Pattern profile',
+				[
+					{ id: 'auto', label: 'Auto (source only)' },
+					{ id: 'inherit', label: 'Inherit (scene override only)' },
+				],
+				'auto',
+			),
 			callback: activate('patterns'),
 		},
 		obs_border_standby: {

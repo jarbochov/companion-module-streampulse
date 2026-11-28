@@ -430,7 +430,19 @@ test('missing speaker state is safe and preset IDs are stable as profiles change
 
 test('OBS studio actions, active profile feedback and variables use live studio state', async () => {
 	const self = createModuleMock()
-	self.state.obsBorders = { activeProfileId: 'border', profiles: [{ id: 'border', name: 'Glow' }] }
+	self.state.obsBorders = {
+		activeProfileId: 'border',
+		profiles: [
+			{ id: 'border', name: 'Glow' },
+			{ id: 'gold', name: 'Gold Frame' },
+		],
+		knownSources: ['Unused Cam', 'Webcam', 'Gameplay'],
+		knownScenes: ['BRB', 'Main', 'Just Chatting'],
+		assignments: {
+			Webcam: { defaultProfileId: 'border', sceneOverrides: { Main: 'gold' } },
+			Gameplay: { defaultProfileId: 'none', sceneOverrides: { Main: 'border' } },
+		},
+	}
 	self.state.obsPatterns = { activeProfileId: 'pattern', profiles: [{ id: 'pattern', name: 'Stars' }] }
 	const calls = []
 	self.api.request = async (...args) => {
@@ -439,11 +451,31 @@ test('OBS studio actions, active profile feedback and variables use live studio 
 	const run = (fn) => async () => fn()
 	const actions = require('../src/actions/obs-studios')(self, run)
 	assert.equal(actions.obs_pattern_activate.options[0].choices[0].label, 'Stars')
+
+	// Multi-select source & scene choices sort active border sources/scenes first with clear status labels
+	const borderTargetOpt = actions.obs_border_activate.options.find((o) => o.id === 'targets')
+	const borderSceneOpt = actions.obs_border_activate.options.find((o) => o.id === 'scenes')
+	assert.equal(borderTargetOpt.type, 'multidropdown')
+	assert.equal(borderSceneOpt.type, 'multidropdown')
+	assert.equal(borderTargetOpt.choices[0].id, 'Gameplay')
+	assert.equal(borderTargetOpt.choices[1].id, 'Webcam')
+	assert.match(borderTargetOpt.choices[1].label, /Glow/)
+	assert.equal(borderTargetOpt.choices[2].id, 'Unused Cam')
+	assert.equal(borderSceneOpt.choices[0].id, 'Main')
+	assert.match(borderSceneOpt.choices[0].label, /2 active/)
+
+	await actions.obs_border_activate.callback({
+		options: { profile: 'gold', targets: ['Webcam', 'Gameplay'], scenes: ['Main', 'Just Chatting'], target: '', scene: '' },
+	})
 	await actions.obs_pattern_activate.callback({
-		options: { profile: 'pattern', target: '$(test:name)', scene: 'Main' },
+		options: { profile: 'pattern', targets: [], scenes: [], target: '$(test:name)', scene: 'Main' },
 	})
 	await actions.obs_border_standby.callback({ options: { profile: 'border', enabled: '0' } })
 	assert.deepEqual(calls, [
+		[
+			'/api/obs-borders/activate',
+			{ method: 'POST', body: { profileId: 'gold', sourceNames: ['Webcam', 'Gameplay'], sceneNames: ['Main', 'Just Chatting'] } },
+		],
 		[
 			'/api/obs-patterns/activate',
 			{ method: 'POST', body: { profileId: 'pattern', sourceName: 'Casey Park', sceneName: 'Main' } },
